@@ -12,15 +12,14 @@ namespace Speedo.Hook
     {
         private LocalHook Direct3DDevice_ResetHook = null;
         private LocalHook Direct3DDevice_PresentHook = null;
-        private LocalHook Direct3DDeviceEx_PresentExHook = null;
+        private LocalHook Direct3DDevice_EndSceneHook = null;
         private Direct3D9Device_ResetDelegate Direct3DDevice_ResetOriginal = null;
         private Direct3D9Device_PresentDelegate Direct3DDevice_PresentOriginal = null;
-        private Direct3D9DeviceEx_PresentExDelegate Direct3DDeviceEx_PresentExOriginal = null;
+        private Direct3D9Device_EndSceneDelegate Direct3DDevice_EndSceneOriginal = null;
         private readonly object _lockRenderTarget = new object();
         private bool isInitialised = false;
         private List<IntPtr> id3dDeviceFunctionAddresses = new List<IntPtr>();
         private const int D3D9_DEVICE_METHOD_COUNT = 119;
-        private const int D3D9Ex_DEVICE_METHOD_COUNT = 15;
         private Speedometer speedo;
         private Surface _renderTarget;
 
@@ -39,27 +38,22 @@ namespace Speedo.Hook
             // First we need to determine the function address for IDirect3DDevice9 and 
             id3dDeviceFunctionAddresses = new List<IntPtr>();
 
-            using (DeviceEx device = new DeviceEx(new Direct3DEx(), 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1 }))
+            using (Device device = new Device(new Direct3D(), 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1 }))
             {
-                id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D9_DEVICE_METHOD_COUNT + D3D9Ex_DEVICE_METHOD_COUNT));
+                id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D9_DEVICE_METHOD_COUNT));
             }
 
             // We want to hook IDirect3DDevice9::Present, IDirect3DDevice9::Reset, IDirect3DDevice9Ex::PresentEx
 
             // Get the original functions
-            Direct3DDevice_ResetOriginal = (Direct3D9Device_ResetDelegate)Marshal.GetDelegateForFunctionPointer(id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset], typeof(Direct3D9Device_ResetDelegate));
-            Direct3DDevice_PresentOriginal = (Direct3D9Device_PresentDelegate)Marshal.GetDelegateForFunctionPointer(id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present], typeof(Direct3D9Device_PresentDelegate));
-            Direct3DDeviceEx_PresentExOriginal = (Direct3D9DeviceEx_PresentExDelegate)Marshal.GetDelegateForFunctionPointer(id3dDeviceFunctionAddresses[(int)Direct3DDevice9ExFunctionOrdinals.PresentEx], typeof(Direct3D9DeviceEx_PresentExDelegate));
+            Direct3DDevice_ResetOriginal = (Direct3D9Device_ResetDelegate)Marshal.GetDelegateForFunctionPointer(
+                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset], typeof(Direct3D9Device_ResetDelegate));
+            Direct3DDevice_PresentOriginal = (Direct3D9Device_PresentDelegate)Marshal.GetDelegateForFunctionPointer(
+                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present], typeof(Direct3D9Device_PresentDelegate));
+            Direct3DDevice_EndSceneOriginal = (Direct3D9Device_EndSceneDelegate)Marshal.GetDelegateForFunctionPointer(
+                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.EndScene], typeof(Direct3D9Device_EndSceneDelegate));
 
             DebugMessage("Initialising hooks.");
-            // Hook PresentEx
-            unsafe
-            {
-                Direct3DDeviceEx_PresentExHook = LocalHook.Create(
-                    id3dDeviceFunctionAddresses[(int)Direct3DDevice9ExFunctionOrdinals.PresentEx],
-                    new Direct3D9DeviceEx_PresentExDelegate(PresentExHook),
-                    this);
-            }
 
             // Hook Present
             unsafe
@@ -76,16 +70,18 @@ namespace Speedo.Hook
                 new Direct3D9Device_ResetDelegate(ResetHook),
                 this);
 
+            // Hook EndScene
+            Direct3DDevice_EndSceneHook = LocalHook.Create(
+                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.EndScene],
+                new Direct3D9Device_EndSceneDelegate(EndSceneHook),
+                this);
+
             /*
              * Don't forget that all hooks will start deactivated...
              * The following ensures that all threads are intercepted:
              * Note: you must do this for each hook.
              */
-                  
-            DebugMessage("Hooking Direct3DDevice9Ex::PresentEx");
-            Direct3DDeviceEx_PresentExHook.ThreadACL.SetExclusiveACL(new int[1]);
-            Hooks.Add(Direct3DDeviceEx_PresentExHook);
-            
+
             DebugMessage("Hooking Direct3DDevice9::Present");
             Direct3DDevice_PresentHook.ThreadACL.SetExclusiveACL(new int[1]);
             Hooks.Add(Direct3DDevice_PresentHook);
@@ -93,6 +89,10 @@ namespace Speedo.Hook
             DebugMessage("Hooking Direct3DDevice9::Reset");
             Direct3DDevice_ResetHook.ThreadACL.SetExclusiveACL(new int[1]);
             Hooks.Add(Direct3DDevice_ResetHook);
+
+            DebugMessage("Hooking Direct3DDevice9::EndScene");
+            Direct3DDevice_EndSceneHook.ThreadACL.SetExclusiveACL(new int[1]);
+            Hooks.Add(Direct3DDevice_EndSceneHook);
 
             DebugMessage("Hook complete.");
         }
@@ -129,7 +129,9 @@ namespace Speedo.Hook
             base.Dispose(disposing);
         }
 
-        private int ResetHook(IntPtr devicePtr, ref PresentParameters presentParameters)
+        bool isUsingPresent = false;
+
+        int ResetHook(IntPtr devicePtr, ref PresentParameters presentParameters)
         {
             speedo.Dispose();
             isInitialised = false;
@@ -137,28 +139,24 @@ namespace Speedo.Hook
             return Direct3DDevice_ResetOriginal(devicePtr, ref presentParameters);
         }
 
-        private unsafe int PresentHook(
+        unsafe int PresentHook(
           IntPtr devicePtr,
           Rectangle* pSourceRect,
           Rectangle* pDestRect,
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion)
         {
+            isUsingPresent = true;
             DoSpeedoRenderTarget((Device)devicePtr);
             return Direct3DDevice_PresentOriginal(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
         }
 
-        private unsafe int PresentExHook(
-            IntPtr devicePtr,
-            Rectangle* pSourceRect,
-            Rectangle* pDestRect,
-            IntPtr hDestWindowOverride,
-            IntPtr pDirtyRegion,
-            Present dwFlags)
+        int EndSceneHook(IntPtr devicePtr)
         {
-            DoSpeedoRenderTarget((Device)devicePtr);
+            if (!isUsingPresent)
+                DoSpeedoRenderTarget((Device)devicePtr);
 
-            return Direct3DDeviceEx_PresentExOriginal(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion, dwFlags);
+            return Direct3DDevice_EndSceneOriginal(devicePtr);
         }
 
         private void DoSpeedoRenderTarget(Device device)
@@ -226,5 +224,9 @@ namespace Speedo.Hook
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion,
           Present dwFlags);
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
+        delegate int Direct3D9Device_EndSceneDelegate(IntPtr device);
+
     }
 }
