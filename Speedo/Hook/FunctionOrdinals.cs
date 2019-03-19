@@ -1,4 +1,4 @@
-﻿namespace Capture.Hook
+﻿namespace Speedo.Hook
 {
     public enum Direct3DDevice9FunctionOrdinals : short
     {

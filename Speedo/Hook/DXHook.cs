@@ -5,7 +5,6 @@ using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using Capture.Hook;
 
 namespace Speedo.Hook
 {
