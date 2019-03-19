@@ -56,7 +56,7 @@
     <Compile Include="Hook\DebugMonitor.cs" />
     <Compile Include="Hook\Speed.cs" />
     <Compile Include="Hook\BaseDXHook.cs" />
-    <Compile Include="Hook\Direct3DDevice9FunctionOrdinals.cs" />
+    <Compile Include="Hook\FunctionOrdinals.cs" />
     <Compile Include="Hook\DXHook.cs" />
     <Compile Include="Hook\Speedometer.cs" />
     <Compile Include="Interface\SpeedoConfig.cs" />
