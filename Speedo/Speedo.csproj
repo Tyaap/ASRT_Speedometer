@@ -50,7 +50,6 @@
   <ItemGroup>
     <Compile Include="SpeedoProcess.cs" />
     <Compile Include="EntryPoint.cs" />
-    <Compile Include="NativeMethods.cs" />
     <Compile Include="Hook\FontLocation.cs" />
     <Compile Include="Hook\FontLookup.cs" />
     <Compile Include="Hook\OnOutputDebugStringHandler.cs" />
