@@ -153,7 +153,7 @@ namespace Speedo.Hook
 
         int EndSceneHook(IntPtr devicePtr)
         {
-            if (!isUsingPresent)
+            if (!isUsingPresent && (int)HookRuntimeInfo.ReturnAddress != 0x447F31)
                 DoSpeedoRenderTarget((Device)devicePtr);
 
             return Direct3DDevice_EndSceneOriginal(devicePtr);
