@@ -17,7 +17,7 @@
     <OutputPath>..\bin\Release\</OutputPath>
     <DefineConstants>
     </DefineConstants>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
     <Optimize>true</Optimize>
     <DebugType>none</DebugType>
     <PlatformTarget>x86</PlatformTarget>
@@ -55,7 +55,6 @@
     <Compile Include="Hook\OnOutputDebugStringHandler.cs" />
     <Compile Include="Hook\DebugMonitor.cs" />
     <Compile Include="Hook\Speed.cs" />
-    <Compile Include="Hook\BaseDXHook.cs" />
     <Compile Include="Hook\FunctionOrdinals.cs" />
     <Compile Include="Hook\DXHook.cs" />
     <Compile Include="Hook\Speedometer.cs" />
