@@ -5,32 +5,48 @@ using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting;
+using System.Threading;
 
 namespace Speedo.Hook
 {
-    internal class DXHook : BaseDXHook
+    internal class DXHook : IDisposable
     {
+        private int _processId = 0;
+        protected List<LocalHook> Hooks = new List<LocalHook>();
+        public SpeedoInterface Interface;
+        public SpeedoConfig Config;
         private LocalHook Direct3DDevice_ResetHook = null;
         private LocalHook Direct3DDevice_PresentHook = null;
         private LocalHook Direct3DDevice_EndSceneHook = null;
         private Direct3D9Device_ResetDelegate Direct3DDevice_ResetOriginal = null;
         private Direct3D9Device_PresentDelegate Direct3DDevice_PresentOriginal = null;
         private Direct3D9Device_EndSceneDelegate Direct3DDevice_EndSceneOriginal = null;
-        private readonly object _lockRenderTarget = new object();
         private bool isInitialised = false;
         private List<IntPtr> id3dDeviceFunctionAddresses = new List<IntPtr>();
         private const int D3D9_DEVICE_METHOD_COUNT = 119;
+        private Speed Speed;
         private Speedometer speedo;
-        private Surface _renderTarget;
+        private bool isUsingPresent = false;
 
-        protected override string HookName => nameof(DXHook);
-
-        public DXHook(SpeedoInterface ssInterface)
-      : base(ssInterface)
+        public DXHook(SpeedoInterface ssInterface) 
         {
+            Interface = ssInterface;
+
+            try
+            {
+                Speed = new Speed(ProcessId);
+            }
+            catch (Exception ex)
+            {
+                DebugMessage("Failed to read pointer! " + ex.Message);
+            }
+
+            DebugMonitor.Start();
+            DebugMonitor.OnOutputDebugString += new OnOutputDebugStringHandler(OnOutputDebugString);
         }
 
-        public override void Hook()
+        public void Hook()
         {
             DebugMessage("Begin Direct3D9 hook.");
 
@@ -53,16 +69,14 @@ namespace Speedo.Hook
             Direct3DDevice_EndSceneOriginal = (Direct3D9Device_EndSceneDelegate)Marshal.GetDelegateForFunctionPointer(
                 id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.EndScene], typeof(Direct3D9Device_EndSceneDelegate));
 
-            DebugMessage("Initialising hooks.");
+            DebugMessage("Initialising hook.");
 
             // Hook Present
-            unsafe
-            {
-                Direct3DDevice_PresentHook = LocalHook.Create(
-                    id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present],
-                    new Direct3D9Device_PresentDelegate(PresentHook),
-                    this);
-            }
+
+            Direct3DDevice_PresentHook = LocalHook.Create(
+                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present],
+                new Direct3D9Device_PresentDelegate(PresentHook),
+                this);
 
             // Hook Reset
             Direct3DDevice_ResetHook = LocalHook.Create(
@@ -97,39 +111,47 @@ namespace Speedo.Hook
             DebugMessage("Hook complete.");
         }
 
-        public override void Cleanup()
+        public void Dispose()
         {
+            Dispose(true);
         }
 
-        private void InitializeDrawing(Device device)
+        protected void Dispose(bool disposing)
         {
-            speedo = new Speedometer(device, (float)Config.Scale, Config.PosX, Config.PosY);
-            isInitialised = true;
-        }
+            if (!disposing)
+            {
+                return;
+            }
 
-        protected override void Dispose(bool disposing)
-        {
+            DebugMessage("Removing Direct3D hook.");
             try
             {
-                lock (_lockRenderTarget)
+                if (Hooks.Count > 0)
                 {
-                    if (_renderTarget != null)
+                    foreach (LocalHook hook in Hooks)
                     {
-                        _renderTarget.Dispose();
-                        _renderTarget = null;
+                        hook.ThreadACL.SetInclusiveACL(new int[1]);
                     }
-                    speedo.Dispose();
-                    Speed.Dispose();
-                    isInitialised = false;
+
+                    Thread.Sleep(100);
+                    foreach (LocalHook hook in Hooks)
+                    {
+                        hook.Dispose();
+                    }
+
+                    Hooks.Clear();
                 }
+
+                speedo.Dispose();
+                Speed.Dispose();
+                DebugMonitor.Dispose();
+
+                isInitialised = false;
             }
             catch
             {
             }
-            base.Dispose(disposing);
         }
-
-        bool isUsingPresent = false;
 
         int ResetHook(IntPtr devicePtr, ref PresentParameters presentParameters)
         {
@@ -139,10 +161,10 @@ namespace Speedo.Hook
             return Direct3DDevice_ResetOriginal(devicePtr, ref presentParameters);
         }
 
-        unsafe int PresentHook(
+        int PresentHook(
           IntPtr devicePtr,
-          Rectangle* pSourceRect,
-          Rectangle* pDestRect,
+          IntPtr pSourceRect,
+          IntPtr pDestRect,
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion)
         {
@@ -161,7 +183,7 @@ namespace Speedo.Hook
 
         private void DoSpeedoRenderTarget(Device device)
         {
-            Frame();
+            Speed.Frame();
             try
             {
                 if (!Config.ShowOverlay)
@@ -202,6 +224,62 @@ namespace Speedo.Hook
             }
         }
 
+        protected IntPtr[] GetVTblAddresses(IntPtr pointer, int numberOfMethods)
+        {
+            return GetVTblAddresses(pointer, 0, numberOfMethods);
+        }
+
+        protected IntPtr[] GetVTblAddresses(IntPtr pointer, int startIndex, int numberOfMethods)
+        {
+            List<IntPtr> numList = new List<IntPtr>();
+            IntPtr ptr = Marshal.ReadIntPtr(pointer);
+            for (int index = startIndex; index < startIndex + numberOfMethods; ++index)
+            {
+                numList.Add(Marshal.ReadIntPtr(ptr, index * IntPtr.Size));
+            }
+
+            return numList.ToArray();
+        }
+
+        protected void DebugMessage(string message)
+        {
+            try
+            {
+                Interface.Message(MessageType.Debug, "DXHook: " + message);
+            }
+            catch (RemotingException)
+            {
+            }
+        }
+
+        private void OnOutputDebugString(int pid, string text)
+        {
+            if (text.Contains("GOING TO STATE:9"))
+            {
+                Speed = new Speed(ProcessId);
+                DebugMessage(string.Format("Addresses found: {0:X8}, {1:X8}, {2:X8}", Speed.GetCarPointer(), Speed.GetBoatPointer(), Speed.GetPlanePointer()));
+                Speed.Display = true;
+            }
+            if (!text.Contains("GOING TO STATE:11") && !text.Contains("Driver::RemoveFromWorld()") || Config.AlwaysShow)
+            {
+                return;
+            }
+
+            Speed.Display = false;
+        }
+
+        protected int ProcessId
+        {
+            get
+            {
+                if (_processId == 0)
+                {
+                    _processId = RemoteHooking.GetCurrentProcessId();
+                }
+
+                return _processId;
+            }
+        }
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
         private delegate int Direct3D9Device_ResetDelegate(
@@ -209,24 +287,14 @@ namespace Speedo.Hook
           ref PresentParameters presentParameters);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
-        private unsafe delegate int Direct3D9Device_PresentDelegate(
+        private delegate int Direct3D9Device_PresentDelegate(
           IntPtr devicePtr,
-          Rectangle* pSourceRect,
-          Rectangle* pDestRect,
+          IntPtr pSourceRect,
+          IntPtr pDestRect,
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion);
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
-        private unsafe delegate int Direct3D9DeviceEx_PresentExDelegate(
-          IntPtr devicePtr,
-          Rectangle* pSourceRect,
-          Rectangle* pDestRect,
-          IntPtr hDestWindowOverride,
-          IntPtr pDirtyRegion,
-          Present dwFlags);
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
         delegate int Direct3D9Device_EndSceneDelegate(IntPtr device);
-
     }
 }

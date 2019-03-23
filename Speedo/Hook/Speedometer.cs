@@ -20,11 +20,8 @@ namespace Speedo.Hook
         private readonly float _posX;
         private readonly float _posY;
 
-        private Device _Device { get; set; }
-
         public Speedometer(Device device, float scale, int x, int y)
         {
-            _Device = device;
             _scale = scale;
             _dial = new Sprite(device);
             carTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\speedocar.png");
@@ -108,11 +105,6 @@ namespace Speedo.Hook
             return Matrix.Transformation2D(new Vector2(0.0f, 0.0f), 0.0f, new Vector2(_scale, _scale), new Vector2(128f * _scale, 128f * _scale), 0.0f, new Vector2(_posX, _posY));
         }
 
-        ~Speedometer()
-        {
-            Dispose(false);
-        }
-
         public void Dispose()
         {
             Dispose(true);
@@ -126,7 +118,10 @@ namespace Speedo.Hook
             }
 
             carTexture.Dispose();
+            boatTexture.Dispose();
+            planeTexture.Dispose();
             needleTexture.Dispose();
+            numberTexture.Dispose();
             _dial.Dispose();
         }
     }

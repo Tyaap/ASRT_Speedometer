@@ -168,7 +168,7 @@ namespace Speedo.Hook
             OnOutputDebugString(pid, text);
         }
 
-        private static void Dispose()
+        public static void Dispose()
         {
             if (m_AckEvent != IntPtr.Zero)
             {
