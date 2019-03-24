@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+using static Speedo.NativeMethods;
 
 namespace Speedo.Hook
 {
@@ -13,68 +14,12 @@ namespace Speedo.Hook
         private static Thread m_Capturer = null;
         private static readonly object m_SyncRoot = new object();
         private static Mutex m_Mutex = null;
-        private const int WAIT_OBJECT_0 = 0;
-        private const uint INFINITE = 4294967295;
-        private const int ERROR_ALREADY_EXISTS = 183;
-        private const uint SECURITY_DESCRIPTOR_REVISION = 1;
-        private const uint SECTION_MAP_READ = 4;
 
         private DebugMonitor()
         {
         }
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr MapViewOfFile(
-          IntPtr hFileMappingObject,
-          uint dwDesiredAccess,
-          uint dwFileOffsetHigh,
-          uint dwFileOffsetLow,
-          uint dwNumberOfBytesToMap);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool UnmapViewOfFile(IntPtr lpBaseAddress);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool InitializeSecurityDescriptor(
-          ref SECURITY_DESCRIPTOR sd,
-          uint dwRevision);
-
-        [DllImport("advapi32.dll", SetLastError = true)]
-        private static extern bool SetSecurityDescriptorDacl(
-          ref SECURITY_DESCRIPTOR sd,
-          bool daclPresent,
-          IntPtr dacl,
-          bool daclDefaulted);
-
-        [DllImport("kernel32.dll")]
-        private static extern IntPtr CreateEvent(
-          ref SECURITY_ATTRIBUTES sa,
-          bool bManualReset,
-          bool bInitialState,
-          string lpName);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool PulseEvent(IntPtr hEvent);
-
-        [DllImport("kernel32.dll")]
-        private static extern bool SetEvent(IntPtr hEvent);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr CreateFileMapping(
-          IntPtr hFile,
-          ref SECURITY_ATTRIBUTES lpFileMappingAttributes,
-          PageProtection flProtect,
-          uint dwMaximumSizeHigh,
-          uint dwMaximumSizeLow,
-          string lpName);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool CloseHandle(IntPtr hHandle);
-
-        [DllImport("kernel32", SetLastError = true)]
-        private static extern int WaitForSingleObject(IntPtr handle, uint milliseconds);
-
-        public static event OnOutputDebugStringHandler OnOutputDebugString;
+        public static event EventHandler<OnOutputDebugStringEventArgs> OnOutputDebugString = delegate { };
 
         public static void Start()
         {
@@ -126,7 +71,7 @@ namespace Speedo.Hook
                     throw CreateApplicationException("Failed to create a file mapping to slot 'DBWIN_BUFFER'");
                 }
 
-                m_SharedMem = MapViewOfFile(m_SharedFile, 4U, 0U, 0U, 512U);
+                m_SharedMem = MapViewOfFile(m_SharedFile, 4, 0U, 0U, (IntPtr)512);
                 if (m_SharedMem == IntPtr.Zero)
                 {
                     throw CreateApplicationException("Failed to create a mapping view for slot 'DBWIN_BUFFER'");
@@ -160,12 +105,7 @@ namespace Speedo.Hook
 
         private static void FireOnOutputDebugString(int pid, string text)
         {
-            if (OnOutputDebugString == null)
-            {
-                return;
-            }
-
-            OnOutputDebugString(pid, text);
+            OnOutputDebugString(null, new OnOutputDebugStringEventArgs(pid, text));
         }
 
         public static void Dispose()
@@ -235,46 +175,14 @@ namespace Speedo.Hook
 
         private static ApplicationException CreateApplicationException(string text)
         {
+            int error = Marshal.GetLastWin32Error();
+
             if (text == null || text.Length < 1)
             {
                 throw new ArgumentNullException(nameof(text), "'text' may not be empty or null.");
             }
 
-            return new ApplicationException(string.Format("{0}. Last Win32 Error was {1}", text, Marshal.GetLastWin32Error()));
-        }
-
-        private struct SECURITY_DESCRIPTOR
-        {
-            public byte revision;
-            public byte size;
-            public short control;
-            public IntPtr owner;
-            public IntPtr group;
-            public IntPtr sacl;
-            public IntPtr dacl;
-        }
-
-        private struct SECURITY_ATTRIBUTES
-        {
-            public int nLength;
-            public IntPtr lpSecurityDescriptor;
-            public int bInheritHandle;
-        }
-
-        [Flags]
-        private enum PageProtection : uint
-        {
-            NoAccess = 1,
-            Readonly = 2,
-            ReadWrite = 4,
-            WriteCopy = 8,
-            Execute = 16,
-            ExecuteRead = 32,
-            ExecuteReadWrite = 64,
-            ExecuteWriteCopy = 128,
-            Guard = 256,
-            NoCache = 512,
-            WriteCombine = 1024,
+            return new ApplicationException(string.Format("{0}. Last Win32 Error was {1}", text, error));
         }
     }
 }
