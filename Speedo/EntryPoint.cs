@@ -1,6 +1,6 @@
-﻿using Speedo.Hook;
+﻿using EasyHook;
+using Speedo.Hook;
 using Speedo.Interface;
-using EasyHook;
 using System;
 using System.Collections;
 using System.IO;
@@ -14,11 +14,11 @@ namespace Speedo
 {
     public class EntryPoint : IEntryPoint
     {
-        private readonly ClientSpeedoInterfaceEventProxy _clientEventProxy = new ClientSpeedoInterfaceEventProxy();
-        private readonly IpcServerChannel _clientServerChannel = null;
+        private readonly IpcServerChannel _clientServerChannel;
         private readonly SpeedoInterface _interface;
         private DXHook _directXHook;
-        bool hostDisconnected = false;
+        private DisconnectedEventProxy _disconnectedEventProxy = new DisconnectedEventProxy();
+        private bool hostDisconnected = false;
 
         public EntryPoint(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
@@ -38,10 +38,13 @@ namespace Speedo
                 ["name"] = channelName,
                 ["portName"] = channelName + Guid.NewGuid().ToString("N")
             };
-            ChannelServices.RegisterChannel(new IpcServerChannel(properties, new BinaryServerFormatterSinkProvider()
+
+            _clientServerChannel = new IpcServerChannel(properties, new BinaryServerFormatterSinkProvider()
             {
                 TypeFilterLevel = TypeFilterLevel.Full
-            }), false);
+            });
+
+            ChannelServices.RegisterChannel(_clientServerChannel, false);
         }
 
         public void Run(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
@@ -52,8 +55,9 @@ namespace Speedo
             {
                 _directXHook = new DXHook(_interface) { Config = config };
                 _directXHook.Hook();
-                _interface.Disconnected += new DisconnectedEvent(_clientEventProxy.DisconnectedProxyHandler);
-                _clientEventProxy.Disconnected += () => hostDisconnected = true;
+                _disconnectedEventProxy.DisconnectedEventHandler += () => hostDisconnected = true;
+                _interface.DisconnectedEventHandler += new DisconnectedEvent(_disconnectedEventProxy.DisconnectedEventFire);
+
             }
             catch (Exception ex)
             {
@@ -75,9 +79,8 @@ namespace Speedo
             {
                 _interface.Message(MessageType.Information, "Disconnecting from process {0}", (object)RemoteHooking.GetCurrentProcessId());
             }
-            catch
-            {
-            }
+            catch { }
+
             ChannelServices.UnregisterChannel(_clientServerChannel);
             Thread.Sleep(100);
         }

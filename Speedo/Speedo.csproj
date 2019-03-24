@@ -48,11 +48,12 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Hook\OnOutputDebugStringEvent.cs" />
+    <Compile Include="NativeMethods.cs" />
     <Compile Include="SpeedoProcess.cs" />
     <Compile Include="EntryPoint.cs" />
     <Compile Include="Hook\FontLocation.cs" />
     <Compile Include="Hook\FontLookup.cs" />
-    <Compile Include="Hook\OnOutputDebugStringHandler.cs" />
     <Compile Include="Hook\DebugMonitor.cs" />
     <Compile Include="Hook\Speed.cs" />
     <Compile Include="Hook\FunctionOrdinals.cs" />
@@ -61,11 +62,7 @@
     <Compile Include="Interface\SpeedoConfig.cs" />
     <Compile Include="Interface\MessageReceivedEvent.cs" />
     <Compile Include="Interface\DisconnectedEvent.cs" />
-    <Compile Include="Interface\MessageType.cs" />
-    <Compile Include="Interface\StateMessage.cs" />
     <Compile Include="Interface\SpeedoInterface.cs" />
-    <Compile Include="Interface\ClientSpeedoInterfaceEventProxy.cs" />
-    <Compile Include="Interface\MessageReceivedEventArgs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
