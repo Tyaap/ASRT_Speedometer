@@ -1,27 +1,11 @@
-﻿using System.Runtime.InteropServices;
-using System.Text;
+﻿using System.Text;
+using static Speedo_Loader.NativeMethods;
 
 namespace Speedo_Loader
 {
     public class IniFile
     {
         public string path;
-
-        [DllImport("kernel32.dll")]
-        private static extern long WritePrivateProfileString(
-          string section,
-          string key,
-          string val,
-          string filePath);
-
-        [DllImport("kernel32.dll")]
-        private static extern int GetPrivateProfileString(
-          string section,
-          string key,
-          string def,
-          StringBuilder retVal,
-          int size,
-          string filePath);
 
         public IniFile(string INIPath)
         {

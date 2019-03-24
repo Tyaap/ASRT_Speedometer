@@ -1,5 +1,4 @@
 ﻿using Speedo;
-using Speedo.Hook;
 using Speedo.Interface;
 using System;
 using System.ComponentModel;
@@ -254,7 +253,7 @@ namespace Speedo_Loader
                     processId = process.Id;
                     _process = process;
                     SpeedoInterface speedoInterface = new SpeedoInterface();
-                    speedoInterface.RemoteMessage += new MessageReceivedEvent(SpeedoInterface_RemoteMessage);
+                    speedoInterface.RemoteMessageEventHandler += new MessageReceivedEvent(SpeedoInterface_RemoteMessage);
                     _speedoProcess = new SpeedoProcess(process, config, speedoInterface);
                     _speedoProcess.SpeedoInterface.Message(MessageType.Debug, "Hook successful!");
                     break;
@@ -440,137 +439,137 @@ namespace Speedo_Loader
 
         private void InitializeComponent()
         {
-            this.btnInject = new System.Windows.Forms.Button();
-            this.picScreen = new System.Windows.Forms.PictureBox();
-            this.txtDebugLog = new System.Windows.Forms.TextBox();
-            this.cbAlwaysShow = new System.Windows.Forms.CheckBox();
-            this.txtExeName = new System.Windows.Forms.TextBox();
-            this.txtPosX = new System.Windows.Forms.TextBox();
-            this.txtPosY = new System.Windows.Forms.TextBox();
-            this.label1 = new System.Windows.Forms.Label();
-            this.label2 = new System.Windows.Forms.Label();
-            this.picOverlay = new System.Windows.Forms.PictureBox();
-            this.cmbResolution = new System.Windows.Forms.ComboBox();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label5 = new System.Windows.Forms.Label();
-            this.txtScale = new System.Windows.Forms.TextBox();
-            this.btnIncreaseScale = new System.Windows.Forms.Button();
-            this.btnDecreaseScale = new System.Windows.Forms.Button();
-            this.label4 = new System.Windows.Forms.Label();
-            ((System.ComponentModel.ISupportInitialize)(this.picScreen)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.picOverlay)).BeginInit();
-            this.SuspendLayout();
+            btnInject = new System.Windows.Forms.Button();
+            picScreen = new System.Windows.Forms.PictureBox();
+            txtDebugLog = new System.Windows.Forms.TextBox();
+            cbAlwaysShow = new System.Windows.Forms.CheckBox();
+            txtExeName = new System.Windows.Forms.TextBox();
+            txtPosX = new System.Windows.Forms.TextBox();
+            txtPosY = new System.Windows.Forms.TextBox();
+            label1 = new System.Windows.Forms.Label();
+            label2 = new System.Windows.Forms.Label();
+            picOverlay = new System.Windows.Forms.PictureBox();
+            cmbResolution = new System.Windows.Forms.ComboBox();
+            label3 = new System.Windows.Forms.Label();
+            label5 = new System.Windows.Forms.Label();
+            txtScale = new System.Windows.Forms.TextBox();
+            btnIncreaseScale = new System.Windows.Forms.Button();
+            btnDecreaseScale = new System.Windows.Forms.Button();
+            label4 = new System.Windows.Forms.Label();
+            ((System.ComponentModel.ISupportInitialize)(picScreen)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(picOverlay)).BeginInit();
+            SuspendLayout();
             // 
             // btnInject
             // 
-            this.btnInject.Location = new System.Drawing.Point(10, 52);
-            this.btnInject.Name = "btnInject";
-            this.btnInject.Size = new System.Drawing.Size(172, 23);
-            this.btnInject.TabIndex = 0;
-            this.btnInject.Text = "Load Speedometer";
-            this.btnInject.UseVisualStyleBackColor = true;
-            this.btnInject.Click += new System.EventHandler(this.BtnInject_Click);
+            btnInject.Location = new System.Drawing.Point(10, 52);
+            btnInject.Name = "btnInject";
+            btnInject.Size = new System.Drawing.Size(172, 23);
+            btnInject.TabIndex = 0;
+            btnInject.Text = "Load Speedometer";
+            btnInject.UseVisualStyleBackColor = true;
+            btnInject.Click += new System.EventHandler(BtnInject_Click);
             // 
             // picScreen
             // 
-            this.picScreen.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
-            this.picScreen.Anchor = System.Windows.Forms.AnchorStyles.None;
-            this.picScreen.BackColor = System.Drawing.Color.Black;
-            this.picScreen.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.picScreen.Location = new System.Drawing.Point(190, 90);
-            this.picScreen.Name = "picScreen";
-            this.picScreen.Size = new System.Drawing.Size(800, 450);
-            this.picScreen.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.picScreen.TabIndex = 2;
-            this.picScreen.TabStop = false;
+            picScreen.AccessibleRole = System.Windows.Forms.AccessibleRole.None;
+            picScreen.Anchor = System.Windows.Forms.AnchorStyles.None;
+            picScreen.BackColor = System.Drawing.Color.Black;
+            picScreen.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            picScreen.Location = new System.Drawing.Point(190, 90);
+            picScreen.Name = "picScreen";
+            picScreen.Size = new System.Drawing.Size(800, 450);
+            picScreen.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            picScreen.TabIndex = 2;
+            picScreen.TabStop = false;
             // 
             // txtDebugLog
             // 
-            this.txtDebugLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtDebugLog.Location = new System.Drawing.Point(15, 640);
-            this.txtDebugLog.Multiline = true;
-            this.txtDebugLog.Name = "txtDebugLog";
-            this.txtDebugLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtDebugLog.Size = new System.Drawing.Size(985, 90);
-            this.txtDebugLog.TabIndex = 16;
+            txtDebugLog.Anchor = ((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
+            | System.Windows.Forms.AnchorStyles.Right);
+            txtDebugLog.Location = new System.Drawing.Point(15, 640);
+            txtDebugLog.Multiline = true;
+            txtDebugLog.Name = "txtDebugLog";
+            txtDebugLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            txtDebugLog.Size = new System.Drawing.Size(985, 90);
+            txtDebugLog.TabIndex = 16;
             // 
             // cbAlwaysShow
             // 
-            this.cbAlwaysShow.AutoSize = true;
-            this.cbAlwaysShow.Checked = true;
-            this.cbAlwaysShow.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cbAlwaysShow.Location = new System.Drawing.Point(10, 195);
-            this.cbAlwaysShow.Name = "cbAlwaysShow";
-            this.cbAlwaysShow.Size = new System.Drawing.Size(89, 17);
-            this.cbAlwaysShow.TabIndex = 26;
-            this.cbAlwaysShow.Text = "Always Show";
-            this.cbAlwaysShow.UseVisualStyleBackColor = true;
+            cbAlwaysShow.AutoSize = true;
+            cbAlwaysShow.Checked = true;
+            cbAlwaysShow.CheckState = System.Windows.Forms.CheckState.Checked;
+            cbAlwaysShow.Location = new System.Drawing.Point(10, 195);
+            cbAlwaysShow.Name = "cbAlwaysShow";
+            cbAlwaysShow.Size = new System.Drawing.Size(89, 17);
+            cbAlwaysShow.TabIndex = 26;
+            cbAlwaysShow.Text = "Always Show";
+            cbAlwaysShow.UseVisualStyleBackColor = true;
             // 
             // txtExeName
             // 
-            this.txtExeName.Location = new System.Drawing.Point(10, 13);
-            this.txtExeName.Name = "txtExeName";
-            this.txtExeName.Size = new System.Drawing.Size(172, 20);
-            this.txtExeName.TabIndex = 27;
-            this.txtExeName.Text = "ASN_App_PcDx9_Final";
+            txtExeName.Location = new System.Drawing.Point(10, 13);
+            txtExeName.Name = "txtExeName";
+            txtExeName.Size = new System.Drawing.Size(172, 20);
+            txtExeName.TabIndex = 27;
+            txtExeName.Text = "ASN_App_PcDx9_Final";
             // 
             // txtPosX
             // 
-            this.txtPosX.Location = new System.Drawing.Point(118, 93);
-            this.txtPosX.Name = "txtPosX";
-            this.txtPosX.Size = new System.Drawing.Size(41, 20);
-            this.txtPosX.TabIndex = 28;
-            this.txtPosX.Text = "50";
-            this.txtPosX.TextChanged += new System.EventHandler(this.TxtPos_TextChanged);
+            txtPosX.Location = new System.Drawing.Point(118, 93);
+            txtPosX.Name = "txtPosX";
+            txtPosX.Size = new System.Drawing.Size(41, 20);
+            txtPosX.TabIndex = 28;
+            txtPosX.Text = "50";
+            txtPosX.TextChanged += new System.EventHandler(TxtPos_TextChanged);
             // 
             // txtPosY
             // 
-            this.txtPosY.Location = new System.Drawing.Point(118, 126);
-            this.txtPosY.Name = "txtPosY";
-            this.txtPosY.Size = new System.Drawing.Size(40, 20);
-            this.txtPosY.TabIndex = 29;
-            this.txtPosY.Text = "120";
-            this.txtPosY.TextChanged += new System.EventHandler(this.TxtPos_TextChanged);
+            txtPosY.Location = new System.Drawing.Point(118, 126);
+            txtPosY.Name = "txtPosY";
+            txtPosY.Size = new System.Drawing.Size(40, 20);
+            txtPosY.TabIndex = 29;
+            txtPosY.Text = "120";
+            txtPosY.TextChanged += new System.EventHandler(TxtPos_TextChanged);
             // 
             // label1
             // 
-            this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(12, 96);
-            this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(91, 13);
-            this.label1.TabIndex = 30;
-            this.label1.Text = "Horizonal Position";
+            label1.AutoSize = true;
+            label1.Location = new System.Drawing.Point(12, 96);
+            label1.Name = "label1";
+            label1.Size = new System.Drawing.Size(91, 13);
+            label1.TabIndex = 30;
+            label1.Text = "Horizonal Position";
             // 
             // label2
             // 
-            this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(21, 129);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(82, 13);
-            this.label2.TabIndex = 31;
-            this.label2.Text = "Vertical Position";
+            label2.AutoSize = true;
+            label2.Location = new System.Drawing.Point(21, 129);
+            label2.Name = "label2";
+            label2.Size = new System.Drawing.Size(82, 13);
+            label2.TabIndex = 31;
+            label2.Text = "Vertical Position";
             // 
             // picOverlay
             // 
-            this.picOverlay.BackColor = System.Drawing.Color.Black;
-            this.picOverlay.Location = new System.Drawing.Point(271, 215);
-            this.picOverlay.Name = "picOverlay";
-            this.picOverlay.Size = new System.Drawing.Size(256, 256);
-            this.picOverlay.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
-            this.picOverlay.TabIndex = 32;
-            this.picOverlay.TabStop = false;
-            this.picOverlay.Paint += new System.Windows.Forms.PaintEventHandler(this.PicOverlay_Paint);
-            this.picOverlay.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseDown);
-            this.picOverlay.MouseMove += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseMove);
-            this.picOverlay.MouseUp += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseUp);
+            picOverlay.BackColor = System.Drawing.Color.Black;
+            picOverlay.Location = new System.Drawing.Point(271, 215);
+            picOverlay.Name = "picOverlay";
+            picOverlay.Size = new System.Drawing.Size(256, 256);
+            picOverlay.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
+            picOverlay.TabIndex = 32;
+            picOverlay.TabStop = false;
+            picOverlay.Paint += new System.Windows.Forms.PaintEventHandler(PicOverlay_Paint);
+            picOverlay.MouseDown += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseDown);
+            picOverlay.MouseMove += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseMove);
+            picOverlay.MouseUp += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseUp);
             // 
             // cmbResolution
             // 
-            this.cmbResolution.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
-            this.cmbResolution.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cmbResolution.FormattingEnabled = true;
-            this.cmbResolution.Items.AddRange(new object[] {
+            cmbResolution.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            cmbResolution.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            cmbResolution.FormattingEnabled = true;
+            cmbResolution.Items.AddRange(new object[] {
             "640x480",
             "720x480",
             "800x600",
@@ -581,102 +580,102 @@ namespace Speedo_Loader
             "1600x900",
             "1920x1080",
             "2560x1600"});
-            this.cmbResolution.Location = new System.Drawing.Point(15, 285);
-            this.cmbResolution.Name = "cmbResolution";
-            this.cmbResolution.Size = new System.Drawing.Size(158, 21);
-            this.cmbResolution.TabIndex = 33;
-            this.cmbResolution.SelectedIndexChanged += new System.EventHandler(this.CmbResolution_SelectedIndexChanged);
-            this.cmbResolution.TextChanged += new System.EventHandler(this.CmbResolution_TextChanged);
+            cmbResolution.Location = new System.Drawing.Point(15, 285);
+            cmbResolution.Name = "cmbResolution";
+            cmbResolution.Size = new System.Drawing.Size(158, 21);
+            cmbResolution.TabIndex = 33;
+            cmbResolution.SelectedIndexChanged += new System.EventHandler(CmbResolution_SelectedIndexChanged);
+            cmbResolution.TextChanged += new System.EventHandler(CmbResolution_TextChanged);
             // 
             // label3
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(13, 266);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(160, 13);
-            this.label3.TabIndex = 34;
-            this.label3.Text = "Select/type in game\'s resolution:";
+            label3.AutoSize = true;
+            label3.Location = new System.Drawing.Point(13, 266);
+            label3.Name = "label3";
+            label3.Size = new System.Drawing.Size(160, 13);
+            label3.TabIndex = 34;
+            label3.Text = "Select/type in game\'s resolution:";
             // 
             // label5
             // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(50, 322);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(76, 13);
-            this.label5.TabIndex = 36;
-            this.label5.Text = "Overlay Scale:";
+            label5.AutoSize = true;
+            label5.Location = new System.Drawing.Point(50, 322);
+            label5.Name = "label5";
+            label5.Size = new System.Drawing.Size(76, 13);
+            label5.TabIndex = 36;
+            label5.Text = "Overlay Scale:";
             // 
             // txtScale
             // 
-            this.txtScale.Location = new System.Drawing.Point(65, 347);
-            this.txtScale.Name = "txtScale";
-            this.txtScale.Size = new System.Drawing.Size(46, 20);
-            this.txtScale.TabIndex = 37;
-            this.txtScale.Text = "1.0";
-            this.txtScale.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
-            this.txtScale.TextChanged += new System.EventHandler(this.TxtScale_TextChanged);
+            txtScale.Location = new System.Drawing.Point(65, 347);
+            txtScale.Name = "txtScale";
+            txtScale.Size = new System.Drawing.Size(46, 20);
+            txtScale.TabIndex = 37;
+            txtScale.Text = "1.0";
+            txtScale.TextAlign = System.Windows.Forms.HorizontalAlignment.Center;
+            txtScale.TextChanged += new System.EventHandler(TxtScale_TextChanged);
             // 
             // btnIncreaseScale
             // 
-            this.btnIncreaseScale.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnIncreaseScale.Location = new System.Drawing.Point(121, 347);
-            this.btnIncreaseScale.Name = "btnIncreaseScale";
-            this.btnIncreaseScale.Size = new System.Drawing.Size(19, 20);
-            this.btnIncreaseScale.TabIndex = 38;
-            this.btnIncreaseScale.Text = "+";
-            this.btnIncreaseScale.UseVisualStyleBackColor = true;
-            this.btnIncreaseScale.Click += new System.EventHandler(this.BtnIncreaseScale_Click);
+            btnIncreaseScale.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+            btnIncreaseScale.Location = new System.Drawing.Point(121, 347);
+            btnIncreaseScale.Name = "btnIncreaseScale";
+            btnIncreaseScale.Size = new System.Drawing.Size(19, 20);
+            btnIncreaseScale.TabIndex = 38;
+            btnIncreaseScale.Text = "+";
+            btnIncreaseScale.UseVisualStyleBackColor = true;
+            btnIncreaseScale.Click += new System.EventHandler(BtnIncreaseScale_Click);
             // 
             // btnDecreaseScale
             // 
-            this.btnDecreaseScale.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.btnDecreaseScale.Location = new System.Drawing.Point(36, 347);
-            this.btnDecreaseScale.Name = "btnDecreaseScale";
-            this.btnDecreaseScale.Size = new System.Drawing.Size(19, 20);
-            this.btnDecreaseScale.TabIndex = 39;
-            this.btnDecreaseScale.Text = "-";
-            this.btnDecreaseScale.UseVisualStyleBackColor = true;
-            this.btnDecreaseScale.Click += new System.EventHandler(this.BtnDecreaseScale_Click);
+            btnDecreaseScale.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, 0);
+            btnDecreaseScale.Location = new System.Drawing.Point(36, 347);
+            btnDecreaseScale.Name = "btnDecreaseScale";
+            btnDecreaseScale.Size = new System.Drawing.Size(19, 20);
+            btnDecreaseScale.TabIndex = 39;
+            btnDecreaseScale.Text = "-";
+            btnDecreaseScale.UseVisualStyleBackColor = true;
+            btnDecreaseScale.Click += new System.EventHandler(BtnDecreaseScale_Click);
             // 
             // label4
             // 
-            this.label4.Location = new System.Drawing.Point(412, 9);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(378, 38);
-            this.label4.TabIndex = 40;
-            this.label4.Text = "Drag the speedometer below to the location you want it to appear in game. Note: S" +
+            label4.Location = new System.Drawing.Point(412, 9);
+            label4.Name = "label4";
+            label4.Size = new System.Drawing.Size(378, 38);
+            label4.TabIndex = 40;
+            label4.Text = "Drag the speedometer below to the location you want it to appear in game. Note: S" +
     "peedometer will not draw if it is in the black area for some resolutions!";
             // 
             // UserInterface
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1002, 742);
-            this.Controls.Add(this.label4);
-            this.Controls.Add(this.btnDecreaseScale);
-            this.Controls.Add(this.btnIncreaseScale);
-            this.Controls.Add(this.txtScale);
-            this.Controls.Add(this.label5);
-            this.Controls.Add(this.label3);
-            this.Controls.Add(this.cmbResolution);
-            this.Controls.Add(this.picOverlay);
-            this.Controls.Add(this.label2);
-            this.Controls.Add(this.label1);
-            this.Controls.Add(this.txtPosY);
-            this.Controls.Add(this.txtPosX);
-            this.Controls.Add(this.txtExeName);
-            this.Controls.Add(this.cbAlwaysShow);
-            this.Controls.Add(this.txtDebugLog);
-            this.Controls.Add(this.picScreen);
-            this.Controls.Add(this.btnInject);
-            this.Name = "UserInterface";
-            this.Text = "Speedo Loader";
-            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnExit);
-            this.Load += new System.EventHandler(this.Form1_Load);
-            ((System.ComponentModel.ISupportInitialize)(this.picScreen)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.picOverlay)).EndInit();
-            this.ResumeLayout(false);
-            this.PerformLayout();
+            AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            ClientSize = new System.Drawing.Size(1002, 742);
+            Controls.Add(label4);
+            Controls.Add(btnDecreaseScale);
+            Controls.Add(btnIncreaseScale);
+            Controls.Add(txtScale);
+            Controls.Add(label5);
+            Controls.Add(label3);
+            Controls.Add(cmbResolution);
+            Controls.Add(picOverlay);
+            Controls.Add(label2);
+            Controls.Add(label1);
+            Controls.Add(txtPosY);
+            Controls.Add(txtPosX);
+            Controls.Add(txtExeName);
+            Controls.Add(cbAlwaysShow);
+            Controls.Add(txtDebugLog);
+            Controls.Add(picScreen);
+            Controls.Add(btnInject);
+            Name = "UserInterface";
+            Text = "Speedo Loader";
+            FormClosing += new System.Windows.Forms.FormClosingEventHandler(OnExit);
+            Load += new System.EventHandler(Form1_Load);
+            ((System.ComponentModel.ISupportInitialize)(picScreen)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(picOverlay)).EndInit();
+            ResumeLayout(false);
+            PerformLayout();
 
         }
     }
