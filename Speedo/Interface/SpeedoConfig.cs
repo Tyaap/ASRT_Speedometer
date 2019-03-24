@@ -5,19 +5,13 @@ namespace Speedo.Interface
     [Serializable]
     public class SpeedoConfig
     {
-        public bool ShowOverlay { get; set; }
-
-        public int PosX { get; set; }
-
-        public int PosY { get; set; }
-
-        public double Scale { get; set; }
-
-        public bool AlwaysShow { get; set; }
+        public int PosX;
+        public int PosY;
+        public double Scale;
+        public bool AlwaysShow;
 
         public SpeedoConfig()
         {
-            ShowOverlay = true;
             PosX = 50;
             PosY = 120;
             Scale = 1.0;

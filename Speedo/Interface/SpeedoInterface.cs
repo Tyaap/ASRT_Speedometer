@@ -5,13 +5,11 @@ namespace Speedo.Interface
     [Serializable]
     public class SpeedoInterface : MarshalByRefObject
     {
-        private readonly object _lock = new object();
+        public int ProcessId;
 
-        public int ProcessId { get; set; }
+        public event MessageReceivedEvent RemoteMessageEventHandler;
 
-        public event MessageReceivedEvent RemoteMessage;
-
-        public event DisconnectedEvent Disconnected;
+        public event DisconnectedEvent DisconnectedEventHandler;
 
         public void Disconnect()
         {
@@ -30,44 +28,40 @@ namespace Speedo.Interface
 
         private void SafeInvokeMessageRecevied(MessageReceivedEventArgs eventArgs)
         {
-            if (RemoteMessage == null)
+            if (RemoteMessageEventHandler != null)
             {
-                return;
-            }
-
-            MessageReceivedEvent messageReceivedEvent = null;
-            foreach (Delegate invocation in RemoteMessage.GetInvocationList())
-            {
-                try
+                MessageReceivedEvent messageReceivedEvent = null;
+                foreach (Delegate invocation in RemoteMessageEventHandler.GetInvocationList())
                 {
-                    messageReceivedEvent = (MessageReceivedEvent)invocation;
-                    messageReceivedEvent(eventArgs);
-                }
-                catch (Exception)
-                {
-                    RemoteMessage -= messageReceivedEvent;
+                    try
+                    {
+                        messageReceivedEvent = (MessageReceivedEvent)invocation;
+                        messageReceivedEvent(eventArgs);
+                    }
+                    catch (Exception)
+                    {
+                        RemoteMessageEventHandler -= messageReceivedEvent;
+                    }
                 }
             }
         }
 
         private void SafeInvokeDisconnected()
         {
-            if (Disconnected == null)
+            if (DisconnectedEventHandler != null)
             {
-                return;
-            }
-
-            DisconnectedEvent disconnectedEvent = null;
-            foreach (Delegate invocation in Disconnected.GetInvocationList())
-            {
-                try
+                DisconnectedEvent disconnectedEvent = null;
+                foreach (Delegate invocation in DisconnectedEventHandler.GetInvocationList())
                 {
-                    disconnectedEvent = (DisconnectedEvent)invocation;
-                    disconnectedEvent();
-                }
-                catch (Exception)
-                {
-                    Disconnected -= disconnectedEvent;
+                    try
+                    {
+                        disconnectedEvent = (DisconnectedEvent)invocation;
+                        disconnectedEvent();
+                    }
+                    catch (Exception)
+                    {
+                        DisconnectedEventHandler -= disconnectedEvent;
+                    }
                 }
             }
         }
