@@ -25,7 +25,6 @@ namespace Speedo.Hook
         private Speed Speed;
         private Speedometer speedo;
         private bool isUsingPresent = false;
-        public delegate void OnOutputDebugStringEvent(int pid, string text);
 
         public DXHook(SpeedoInterface ssInterface)
         {
