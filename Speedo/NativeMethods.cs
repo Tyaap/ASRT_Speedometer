@@ -5,46 +5,6 @@ namespace Speedo
 {
     internal static class NativeMethods
     {
-        private const int WAIT_OBJECT_0 = 0;
-        private const uint INFINITE = 4294967295;
-        private const int ERROR_ALREADY_EXISTS = 183;
-        private const uint SECURITY_DESCRIPTOR_REVISION = 1;
-        private const uint SECTION_MAP_READ = 4;
-
-        public struct SECURITY_DESCRIPTOR
-        {
-            public byte revision;
-            public byte size;
-            public short control;
-            private readonly IntPtr owner;
-            private readonly IntPtr group;
-            private readonly IntPtr sacl;
-            private readonly IntPtr dacl;
-        }
-
-        public struct SECURITY_ATTRIBUTES
-        {
-            public int nLength;
-            private readonly IntPtr lpSecurityDescriptor;
-            public int bInheritHandle;
-        }
-
-        [Flags]
-        public enum PageProtection : uint
-        {
-            NoAccess = 1,
-            Readonly = 2,
-            ReadWrite = 4,
-            WriteCopy = 8,
-            Execute = 16,
-            ExecuteRead = 32,
-            ExecuteReadWrite = 64,
-            ExecuteWriteCopy = 128,
-            Guard = 256,
-            NoCache = 512,
-            WriteCombine = 1024,
-        }
-
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern IntPtr MapViewOfFile(
           IntPtr hFileMappingObject,
@@ -109,5 +69,39 @@ namespace Speedo
           byte[] lpBuffer,
           IntPtr dwSize,
           IntPtr lpNumberOfBytesRead);
+    }
+
+    public struct SECURITY_DESCRIPTOR
+    {
+        public byte revision;
+        public byte size;
+        public short control;
+        private readonly IntPtr owner;
+        private readonly IntPtr group;
+        private readonly IntPtr sacl;
+        private readonly IntPtr dacl;
+    }
+
+    public struct SECURITY_ATTRIBUTES
+    {
+        public int nLength;
+        private readonly IntPtr lpSecurityDescriptor;
+        public int bInheritHandle;
+    }
+
+    [Flags]
+    public enum PageProtection : uint
+    {
+        NoAccess = 1,
+        Readonly = 2,
+        ReadWrite = 4,
+        WriteCopy = 8,
+        Execute = 16,
+        ExecuteRead = 32,
+        ExecuteReadWrite = 64,
+        ExecuteWriteCopy = 128,
+        Guard = 256,
+        NoCache = 512,
+        WriteCombine = 1024,
     }
 }
