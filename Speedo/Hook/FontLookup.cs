@@ -36,4 +36,13 @@ namespace Speedo.Hook
             return Location[1];
         }
     }
+
+    public struct FontLocation
+    {
+        public int x;
+        public int y;
+        public int width;
+        public int height;
+        public char letter;
+    }
 }

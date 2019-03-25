@@ -41,7 +41,7 @@ namespace Speedo.Hook
             }
 
             DebugMonitor.Start();
-            DebugMonitor.OnOutputDebugString += new EventHandler<OnOutputDebugStringEventArgs>(OnOutputDebugString);
+            DebugMonitor.OnOutputDebugStringHandler += new EventHandler<OnOutputDebugStringEventArgs>(OnOutputDebugString);
         }
 
         public void Hook()
@@ -113,25 +113,24 @@ namespace Speedo.Hook
 
         protected void Dispose(bool disposing)
         {
-            if (!disposing)
+            if (disposing)
             {
-                return;
-            }
 
-            DebugMessage("Removing Direct3D hook.");
-            try
-            {
-                Direct3DDevice_PresentHook.Dispose();
-                Direct3DDevice_ResetHook.Dispose();
-                Direct3DDevice_EndSceneHook.Dispose();
-                speedo.Dispose();
-                Speed.Dispose();
-                DebugMonitor.Dispose();
+                DebugMessage("Removing Direct3D hook.");
+                try
+                {
+                    Direct3DDevice_PresentHook.Dispose();
+                    Direct3DDevice_ResetHook.Dispose();
+                    Direct3DDevice_EndSceneHook.Dispose();
+                    speedo.Dispose();
+                    Speed.Dispose();
+                    DebugMonitor.Dispose();
 
-                isInitialised = false;
-            }
-            catch
-            {
+                    isInitialised = false;
+                }
+                catch
+                {
+                }
             }
         }
 
@@ -234,12 +233,11 @@ namespace Speedo.Hook
                 DebugMessage(string.Format("Addresses found: {0:X8}, {1:X8}, {2:X8}", Speed.GetCarPointer(), Speed.GetBoatPointer(), Speed.GetPlanePointer()));
                 Speed.Display = true;
             }
-            if (!e.text.Contains("GOING TO STATE:11") && !e.text.Contains("Driver::RemoveFromWorld()") || Config.AlwaysShow)
-            {
-                return;
-            }
 
-            Speed.Display = false;
+            if ((e.text.Contains("GOING TO STATE:11") || e.text.Contains("Driver::RemoveFromWorld()")) && !Config.AlwaysShow)
+            {
+                Speed.Display = false;
+            }
         }
 
         protected int ProcessId

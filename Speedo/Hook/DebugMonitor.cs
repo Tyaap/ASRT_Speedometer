@@ -19,7 +19,7 @@ namespace Speedo.Hook
         {
         }
 
-        public static event EventHandler<OnOutputDebugStringEventArgs> OnOutputDebugString = delegate { };
+        public static event EventHandler<OnOutputDebugStringEventArgs> OnOutputDebugStringHandler = delegate { };
 
         public static void Start()
         {
@@ -105,7 +105,7 @@ namespace Speedo.Hook
 
         private static void FireOnOutputDebugString(int pid, string text)
         {
-            OnOutputDebugString(null, new OnOutputDebugStringEventArgs(pid, text));
+            OnOutputDebugStringHandler(null, new OnOutputDebugStringEventArgs(pid, text));
         }
 
         public static void Dispose()
