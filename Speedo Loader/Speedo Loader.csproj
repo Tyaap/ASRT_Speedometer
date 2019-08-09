@@ -7,7 +7,7 @@
     <ProjectGuid>{58EB00AE-6C60-45ED-952F-B56DD484D063}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AssemblyName>Speedo Loader</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <TargetFrameworkProfile />
     <ApplicationVersion>1.0.0.0</ApplicationVersion>
     <FileAlignment>512</FileAlignment>
@@ -49,12 +49,10 @@
     <Compile Include="ResolutionScaler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\imagescreen.jpg">
+    <Content Include="Resources\imagescreen.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\speedorough.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="Resources\speedocar.png" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="UserInterface.resx">

@@ -11,7 +11,7 @@ namespace Speedo.Hook
     internal class DXHook : IDisposable
     {
         private int _processId = 0;
-        public SpeedoInterface Interface;
+        public static SpeedoInterface Interface;
         public SpeedoConfig Config;
         private LocalHook Direct3DDevice_ResetHook = null;
         private LocalHook Direct3DDevice_PresentHook = null;
@@ -22,23 +22,13 @@ namespace Speedo.Hook
         private bool isInitialised = false;
         private List<IntPtr> id3dDeviceFunctionAddresses = new List<IntPtr>();
         private const int D3D9_DEVICE_METHOD_COUNT = 119;
-        private Speed Speed;
+        private Speed speed;
         private Speedometer speedo;
         private bool isUsingPresent = false;
 
         public DXHook(SpeedoInterface ssInterface)
         {
             Interface = ssInterface;
-
-            try
-            {
-                Speed = new Speed(ProcessId);
-            }
-            catch (Exception ex)
-            {
-                DebugMessage("Failed to read pointer! " + ex.Message);
-            }
-
             DebugMonitor.Start();
             DebugMonitor.OnOutputDebugStringHandler += new EventHandler<OnOutputDebugStringEventArgs>(OnOutputDebugString);
         }
@@ -114,7 +104,6 @@ namespace Speedo.Hook
         {
             if (disposing)
             {
-
                 DebugMessage("Removing Direct3D hook.");
                 try
                 {
@@ -122,7 +111,7 @@ namespace Speedo.Hook
                     Direct3DDevice_ResetHook.Dispose();
                     Direct3DDevice_EndSceneHook.Dispose();
                     speedo.Dispose();
-                    Speed.Dispose();
+                    speed.Dispose();
                     DebugMonitor.Dispose();
 
                     isInitialised = false;
@@ -137,7 +126,6 @@ namespace Speedo.Hook
         {
             speedo.Dispose();
             isInitialised = false;
-
             return Direct3DDevice_ResetOriginal(devicePtr, ref presentParameters);
         }
 
@@ -165,27 +153,28 @@ namespace Speedo.Hook
 
         private void DoSpeedoRenderTarget(Device device)
         {
-            Speed.Frame();
             try
             {
-                if (Speed.Display || Config.AlwaysShow)
+                if (!isInitialised)
                 {
-                    if (!isInitialised)
-                    {
-                        speedo = new Speedometer(device, (float)Config.Scale, Config.PosX, Config.PosY);
-                        isInitialised = true;
-                    }
+                    speed = new Speed(ProcessId);
+                    speedo = new Speedometer(device, (float)Config.Scale, Config.PosX, Config.PosY);
+                    isInitialised = true;
+                }
 
-                    switch (Speed.CurrentMode)
+                speed.Frame();
+                if (speed.Display || Config.AlwaysShow)
+                {
+                    switch (speed.CurrentMode)
                     {
                         case Speed.CurrentModeEnum.Car:
-                            speedo.Draw(Speed.Car, Speed.CurrentMode);
+                            speedo.Draw(speed.Car, speed.CurrentMode);
                             break;
                         case Speed.CurrentModeEnum.Boat:
-                            speedo.Draw(Speed.Boat, Speed.CurrentMode);
+                            speedo.Draw(speed.Boat, speed.CurrentMode);
                             break;
                         case Speed.CurrentModeEnum.Plane:
-                            speedo.Draw(Speed.Plane, Speed.CurrentMode);
+                            speedo.Draw(speed.Plane, speed.CurrentMode);
                             break;
                     }
                 }
@@ -213,7 +202,7 @@ namespace Speedo.Hook
             return numList.ToArray();
         }
 
-        protected void DebugMessage(string message)
+        public static void DebugMessage(string message)
         {
             try
             {
@@ -228,14 +217,12 @@ namespace Speedo.Hook
         {
             if (e.text.Contains("GOING TO STATE:9"))
             {
-                Speed = new Speed(ProcessId);
-                DebugMessage(string.Format("Addresses found: {0:X8}, {1:X8}, {2:X8}", Speed.GetCarPointer(), Speed.GetBoatPointer(), Speed.GetPlanePointer()));
-                Speed.Display = true;
+                speed.Display = true;
             }
 
-            if ((e.text.Contains("GOING TO STATE:11") || e.text.Contains("Driver::RemoveFromWorld()")) && !Config.AlwaysShow)
+            if ((e.text.Contains("GOING TO STATE:11")))
             {
-                Speed.Display = false;
+                speed.Display = false;
             }
         }
 

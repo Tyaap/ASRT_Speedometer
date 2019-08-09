@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Runtime.InteropServices;
 using static Speedo.NativeMethods;
 
 namespace Speedo.Hook
@@ -8,16 +7,14 @@ namespace Speedo.Hook
     public class Speed : IDisposable
     {
         private float _plane = 0.0f;
-        public int[] addresses = new int[6];
-        private Process process = new Process();
-        public List<IntPtr> values = new List<IntPtr>();
-        private const int PROCESS_WM_READ = 16;
         private float _car1;
         private float _boat;
         public CurrentModeEnum CurrentMode;
-        private static IntPtr processHandle;
-        public bool isInitialised;
-        public bool Display;
+        private UIntPtr processHandle;
+        public bool Display = true;
+        UIntPtr baseAddress = (UIntPtr)0xEC1ECC;
+        UIntPtr ptrSize = (UIntPtr)IntPtr.Size;
+        UIntPtr floatSize = (UIntPtr)Marshal.SizeOf(typeof(float));
 
         public enum CurrentModeEnum
         {
@@ -27,62 +24,39 @@ namespace Speedo.Hook
         }
 
         public Speed(int processId)
-        {
-            if (!isInitialised)
-            {
-                processHandle = OpenProcess(16, false, processId);
-                process = Process.GetProcessById(processId);
-            }
-
+        {     
+            processHandle = OpenProcess(16, false, processId);     
             CurrentMode = CurrentModeEnum.Car;
-            isInitialised = true;
-
-            values.Clear();
-            values.Add(GetCarPointer());
-            values.Add(GetBoatPointer());
-            values.Add(GetPlanePointer());
         }
 
-        public IntPtr GetBoatPointer()
+        public UIntPtr GetBoatPointer()
         {
-            byte[] lpBuffer = new byte[4];
-            IntPtr tmp;
-            ReadProcessMemory(processHandle, process.MainModule.BaseAddress + 11280076, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 184, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 304, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 1252, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            return (IntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 464;
+            byte[] lpBuffer = new byte[ptrSize.ToUInt32()];
+            ReadProcessMemory(processHandle, baseAddress, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 184, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 304, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 1252, lpBuffer, ptrSize, UIntPtr.Zero);
+            return (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 464;
         }
 
-        public IntPtr GetCarPointer()
+        public UIntPtr GetCarPointer()
         {
-            byte[] lpBuffer = new byte[4];
-            IntPtr tmp;
-            ReadProcessMemory(processHandle, process.MainModule.BaseAddress + 11280076, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 176, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 16, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 756, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            return (IntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 200;
+            byte[] lpBuffer = new byte[ptrSize.ToUInt32()];
+            ReadProcessMemory(processHandle, (UIntPtr)0xEC1ECC, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 0xB0, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 0x10, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 0x2F4, lpBuffer, ptrSize, UIntPtr.Zero);
+            return (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 0xC8;
         }
 
-        public IntPtr GetPlanePointer()
+        public UIntPtr GetPlanePointer()
         {
-            byte[] lpBuffer = new byte[4];
-            IntPtr tmp;
-            ReadProcessMemory(processHandle, process.MainModule.BaseAddress + 11280076, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 180, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 304, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            tmp = (IntPtr)BitConverter.ToUInt32(lpBuffer, 0);
-            ReadProcessMemory(processHandle, tmp + 1248, lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
-            return (IntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 528;
+            byte[] lpBuffer = new byte[ptrSize.ToUInt32()];
+            ReadProcessMemory(processHandle, (UIntPtr)0xEC1ECC, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 180, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 304, lpBuffer, ptrSize, UIntPtr.Zero);
+            ReadProcessMemory(processHandle, (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 1248, lpBuffer, ptrSize, UIntPtr.Zero);
+            return (UIntPtr)BitConverter.ToUInt32(lpBuffer, 0) + 528;
         }
 
         public void Frame()
@@ -97,13 +71,14 @@ namespace Speedo.Hook
 
         public void DoPeriodicUpdate()
         {
-            byte[] lpBuffer = new byte[4];
-            ReadProcessMemory(processHandle, values[0], lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
+            byte[] lpBuffer = new byte[floatSize.ToUInt32()];
+            bool isAvailable = ReadProcessMemory(processHandle, GetCarPointer(), lpBuffer, floatSize, UIntPtr.Zero);
             Car = BitConverter.ToSingle(lpBuffer, 0);
-            ReadProcessMemory(processHandle, values[1], lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
+            ReadProcessMemory(processHandle, GetBoatPointer(), lpBuffer, floatSize, UIntPtr.Zero);
             Boat = BitConverter.ToSingle(lpBuffer, 0);
-            ReadProcessMemory(processHandle, values[2], lpBuffer, (IntPtr)lpBuffer.Length, (IntPtr)0);
+            ReadProcessMemory(processHandle, GetPlanePointer(), lpBuffer, floatSize, UIntPtr.Zero);
             Plane = BitConverter.ToSingle(lpBuffer, 0);
+            Display = Display && isAvailable;
         }
 
         public float Car
@@ -184,10 +159,7 @@ namespace Speedo.Hook
             }
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
+        public void Dispose() => Dispose(true);
 
         protected virtual void Dispose(bool disposing)
         {
@@ -195,8 +167,6 @@ namespace Speedo.Hook
             {
                 return;
             }
-
-            process.Dispose();
         }
     }
 }

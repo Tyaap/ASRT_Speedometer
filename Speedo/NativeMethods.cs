@@ -6,15 +6,15 @@ namespace Speedo
     internal static class NativeMethods
     {
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr MapViewOfFile(
-          IntPtr hFileMappingObject,
+        internal static extern UIntPtr MapViewOfFile(
+          UIntPtr hFileMappingObject,
           uint dwDesiredAccess,
           uint dwFileOffsetHigh,
           uint dwFileOffsetLow,
-          IntPtr dwNumberOfBytesToMap);
+          UIntPtr dwNumberOfBytesToMap);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool UnmapViewOfFile(IntPtr lpBaseAddress);
+        internal static extern bool UnmapViewOfFile(UIntPtr lpBaseAddress);
 
         [DllImport("advapi32.dll", SetLastError = true)]
         internal static extern bool InitializeSecurityDescriptor(
@@ -29,21 +29,21 @@ namespace Speedo
           bool daclDefaulted);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        internal static extern IntPtr CreateEvent(
+        internal static extern UIntPtr CreateEvent(
           ref SECURITY_ATTRIBUTES sa,
           bool bManualReset,
           bool bInitialState,
           string lpName);
 
         [DllImport("kernel32.dll")]
-        internal static extern bool PulseEvent(IntPtr hEvent);
+        internal static extern bool PulseEvent(UIntPtr hEvent);
 
         [DllImport("kernel32.dll")]
-        internal static extern bool SetEvent(IntPtr hEvent);
+        internal static extern bool SetEvent(UIntPtr hEvent);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        internal static extern IntPtr CreateFileMapping(
-          IntPtr hFile,
+        internal static extern UIntPtr CreateFileMapping(
+          UIntPtr hFile,
           ref SECURITY_ATTRIBUTES lpFileMappingAttributes,
           PageProtection flProtect,
           uint dwMaximumSizeHigh,
@@ -51,24 +51,24 @@ namespace Speedo
           string lpName);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool CloseHandle(IntPtr hHandle);
+        internal static extern bool CloseHandle(UIntPtr hHandle);
 
         [DllImport("kernel32", SetLastError = true)]
-        internal static extern int WaitForSingleObject(IntPtr handle, uint milliseconds);
+        internal static extern int WaitForSingleObject(UIntPtr handle, uint milliseconds);
 
         [DllImport("kernel32.dll")]
-        internal static extern IntPtr OpenProcess(
+        internal static extern UIntPtr OpenProcess(
           int dwDesiredAccess,
           bool bInheritHandle,
           int dwProcessId);
 
         [DllImport("kernel32.dll")]
         internal static extern bool ReadProcessMemory(
-          IntPtr hProcess,
-          IntPtr lpBaseAddress,
+          UIntPtr hProcess,
+          UIntPtr lpBaseAddress,
           byte[] lpBuffer,
-          IntPtr dwSize,
-          IntPtr lpNumberOfBytesRead);
+          UIntPtr dwSize,
+          UIntPtr lpNumberOfBytesRead);
     }
 
     public struct SECURITY_DESCRIPTOR
@@ -76,16 +76,16 @@ namespace Speedo
         public byte revision;
         public byte size;
         public short control;
-        private readonly IntPtr owner;
-        private readonly IntPtr group;
-        private readonly IntPtr sacl;
-        private readonly IntPtr dacl;
+        private readonly int owner;
+        private readonly int group;
+        private readonly int sacl;
+        private readonly int dacl;
     }
 
     public struct SECURITY_ATTRIBUTES
     {
         public int nLength;
-        private readonly IntPtr lpSecurityDescriptor;
+        private readonly int lpSecurityDescriptor;
         public int bInheritHandle;
     }
 

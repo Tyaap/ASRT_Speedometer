@@ -5,52 +5,57 @@ namespace Speedo_Loader
 {
     internal class ResolutionScaler
     {
-        public static void ReadResolutionString(string text, int width, int height)
+        public static bool ReadResolutionString(string text, int width, int height)
         {
-            ResX = int.Parse(text.Split('x', 'X', '*')[0]);
-            ResXMultiplier = GetResolutionMultiplier(width, ResX);
-            ResY = int.Parse(text.Split('x', 'X', '*')[1]);
-            ResYMultiplier = GetResolutionMultiplier(height, ResY);
-            GetResolutionValues(new Point(ResX, ResY));
-            AspectRatio = GetAspectRatio(ResX, ResY);
+            string[] strings = text.Split(new char[] { 'x', 'X', '*' }, 2);
+            if (strings.Length != 2)
+            {
+                return false;
+            }
+
+            if (int.TryParse(strings[0], out int x) && x >= 640 && x <= 10000 &&
+                int.TryParse(strings[1], out int y) && y >= 480 && y <= 10000)
+            {
+                ResX = x;
+                ResY = y;
+                ResXMultiplier = GetResolutionMultiplier(width, ResX);
+                ResYMultiplier = GetResolutionMultiplier(height, ResY);
+                GetResolutionValues(new Point(ResX, ResY));
+                AspectRatio = GetAspectRatio(ResX, ResY);
+                return true;
+            }
+
+            return false;
         }
 
-        public static double GetResolutionMultiplier(int Original, int Resized)
+        public static decimal GetResolutionMultiplier(int Original, int Resized)
         {
-            return Resized / (double)Original;
+            return Resized / (decimal)Original;
         }
 
         public static Point SetResolutionValues(Point res)
         {
-            return new Point()
-            {
-                X = (int)Math.Round(res.X * ResXMultiplier, 0),
-                Y = (int)Math.Round(res.Y * ResYMultiplier, 0)
-            };
+            return new Point((int)(res.X * ResXMultiplier), (int)(res.Y * ResYMultiplier));
         }
 
         public static Point GetResolutionValues(Point res)
         {
-            return new Point()
-            {
-                X = (int)Math.Round(res.X * ResXMultiplier, 0),
-                Y = (int)Math.Round(res.Y * ResYMultiplier, 0)
-            };
+            return new Point((int)(res.X * ResXMultiplier), (int)(res.Y * ResYMultiplier));
         }
 
-        public static double GetAspectRatio(int x, int y)
+        public static decimal GetAspectRatio(int x, int y)
         {
-            return x / (double)y;
+            return x / (decimal)y;
         }
 
         public static int ResX { get; set; }
 
         public static int ResY { get; set; }
 
-        public static double ResXMultiplier { get; set; }
+        public static decimal ResXMultiplier { get; set; }
 
-        public static double ResYMultiplier { get; set; }
+        public static decimal ResYMultiplier { get; set; }
 
-        public static double AspectRatio { get; set; }
+        public static decimal AspectRatio { get; set; }
     }
 }

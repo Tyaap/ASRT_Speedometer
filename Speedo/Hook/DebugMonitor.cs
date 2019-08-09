@@ -7,17 +7,13 @@ namespace Speedo.Hook
 {
     public sealed class DebugMonitor
     {
-        private static IntPtr m_AckEvent = IntPtr.Zero;
-        private static IntPtr m_ReadyEvent = IntPtr.Zero;
-        private static IntPtr m_SharedFile = IntPtr.Zero;
-        private static IntPtr m_SharedMem = IntPtr.Zero;
+        private static UIntPtr m_AckEvent = UIntPtr.Zero;
+        private static UIntPtr m_ReadyEvent = UIntPtr.Zero;
+        private static UIntPtr m_SharedFile = UIntPtr.Zero;
+        private static UIntPtr m_SharedMem = UIntPtr.Zero;
         private static Thread m_Capturer = null;
         private static readonly object m_SyncRoot = new object();
         private static Mutex m_Mutex = null;
-
-        private DebugMonitor()
-        {
-        }
 
         public static event EventHandler<OnOutputDebugStringEventArgs> OnOutputDebugStringHandler = delegate { };
 
@@ -54,25 +50,25 @@ namespace Speedo.Hook
 
                 SECURITY_ATTRIBUTES securityAttributes = new SECURITY_ATTRIBUTES();
                 m_AckEvent = CreateEvent(ref securityAttributes, false, false, "DBWIN_BUFFER_READY");
-                if (m_AckEvent == IntPtr.Zero)
+                if (m_AckEvent == UIntPtr.Zero)
                 {
                     throw CreateApplicationException("Failed to create event 'DBWIN_BUFFER_READY'");
                 }
 
                 m_ReadyEvent = CreateEvent(ref securityAttributes, false, false, "DBWIN_DATA_READY");
-                if (m_ReadyEvent == IntPtr.Zero)
+                if (m_ReadyEvent == UIntPtr.Zero)
                 {
                     throw CreateApplicationException("Failed to create event 'DBWIN_DATA_READY'");
                 }
 
-                m_SharedFile = CreateFileMapping(new IntPtr(-1), ref securityAttributes, PageProtection.ReadWrite, 0U, 4096U, "DBWIN_BUFFER");
-                if (m_SharedFile == IntPtr.Zero)
+                m_SharedFile = CreateFileMapping(UIntPtr.Zero, ref securityAttributes, PageProtection.ReadWrite, 0U, 4096U, "DBWIN_BUFFER");
+                if (m_SharedFile == UIntPtr.Zero)
                 {
                     throw CreateApplicationException("Failed to create a file mapping to slot 'DBWIN_BUFFER'");
                 }
 
-                m_SharedMem = MapViewOfFile(m_SharedFile, 4, 0U, 0U, (IntPtr)512);
-                if (m_SharedMem == IntPtr.Zero)
+                m_SharedMem = MapViewOfFile(m_SharedFile, 4, 0U, 0U, (UIntPtr)512);
+                if (m_SharedMem == UIntPtr.Zero)
                 {
                     throw CreateApplicationException("Failed to create a mapping view for slot 'DBWIN_BUFFER'");
                 }
@@ -84,7 +80,7 @@ namespace Speedo.Hook
 
         private static void Capture()
         {
-            IntPtr ptr = new IntPtr(m_SharedMem.ToInt32() + Marshal.SizeOf(typeof(int)));
+            UIntPtr ptr = m_SharedMem + UIntPtr.Size;
             while (true)
             {
                 SetEvent(m_AckEvent);
@@ -93,7 +89,7 @@ namespace Speedo.Hook
                 {
                     if (num == 0)
                     {
-                        FireOnOutputDebugString(Marshal.ReadInt32(m_SharedMem), Marshal.PtrToStringAnsi(ptr));
+                        FireOnOutputDebugString(Marshal.ReadInt32((IntPtr)(long)(ulong)ptr), Marshal.PtrToStringAnsi((IntPtr)(long)(ulong)ptr));
                     }
                 }
                 else
@@ -110,41 +106,40 @@ namespace Speedo.Hook
 
         public static void Dispose()
         {
-            if (m_AckEvent != IntPtr.Zero)
+            if (m_AckEvent != UIntPtr.Zero)
             {
                 if (!CloseHandle(m_AckEvent))
                 {
                     throw CreateApplicationException("Failed to close handle for 'AckEvent'");
                 }
 
-                m_AckEvent = IntPtr.Zero;
+                m_AckEvent = UIntPtr.Zero;
             }
-            if (m_ReadyEvent != IntPtr.Zero)
+            if (m_ReadyEvent != UIntPtr.Zero)
             {
                 if (!CloseHandle(m_ReadyEvent))
                 {
                     throw CreateApplicationException("Failed to close handle for 'ReadyEvent'");
                 }
 
-                m_ReadyEvent = IntPtr.Zero;
+                m_ReadyEvent = UIntPtr.Zero;
             }
-            if (m_SharedFile != IntPtr.Zero)
+            if (m_SharedFile != UIntPtr.Zero)
             {
                 if (!CloseHandle(m_SharedFile))
                 {
                     throw CreateApplicationException("Failed to close handle for 'SharedFile'");
                 }
-
-                m_SharedFile = IntPtr.Zero;
+                m_SharedFile = UIntPtr.Zero;
             }
-            if (m_SharedMem != IntPtr.Zero)
+            if (m_SharedMem != UIntPtr.Zero)
             {
                 if (!UnmapViewOfFile(m_SharedMem))
                 {
                     throw CreateApplicationException("Failed to unmap view for slot 'DBWIN_BUFFER'");
                 }
 
-                m_SharedMem = IntPtr.Zero;
+                m_SharedMem = UIntPtr.Zero;
             }
             if (m_Mutex == null)
             {
@@ -166,7 +161,7 @@ namespace Speedo.Hook
 
                 m_Capturer = null;
                 PulseEvent(m_ReadyEvent);
-                while (m_AckEvent != IntPtr.Zero)
+                while (m_AckEvent != UIntPtr.Zero)
                 {
                     ;
                 }

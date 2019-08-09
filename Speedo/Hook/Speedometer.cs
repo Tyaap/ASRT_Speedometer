@@ -105,10 +105,7 @@ namespace Speedo.Hook
             return Matrix.Transformation2D(new Vector2(0.0f, 0.0f), 0.0f, new Vector2(_scale, _scale), new Vector2(128f * _scale, 128f * _scale), 0.0f, new Vector2(_posX, _posY));
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
+        public void Dispose() => Dispose(true);
 
         protected virtual void Dispose(bool disposing)
         {
