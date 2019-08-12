@@ -1,4 +1,4 @@
-# S&SRT Speedometer
+# S&ASRT Speedometer
 A speedometer for Sonic &amp; All-Stars Racing Transformed.
 
 * Base code is from the speedometer made by Iceblade, thanks! :)
