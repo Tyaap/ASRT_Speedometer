@@ -66,7 +66,7 @@ namespace Speedo_Loader
             string resolution = ini.IniReadValue("General", "Resolution");
             if (!ResolutionScaler.ReadResolutionString(resolution, picScreen.Width, picScreen.Height))
             {
-                cmbResolution.SelectedIndex = 8;
+                cmbResolution.SelectedIndex = 7;
             }
             else
             {
@@ -356,16 +356,16 @@ namespace Speedo_Loader
             this.cmbResolution.FormattingEnabled = true;
             this.cmbResolution.Items.AddRange(new object[] {
             "640x480",
-            "720x480",
             "800x600",
             "1024x768",
             "1280x720",
             "1366x768",
-            "1680x1050",
+            "1440x900",
             "1600x900",
             "1920x1080",
-            "2560x1600",
+            "1920x1200",
             "2560x1440",
+            "2560x1600",
             "3840x2160"});
             this.cmbResolution.Location = new System.Drawing.Point(30, 149);
             this.cmbResolution.Name = "cmbResolution";
@@ -491,7 +491,7 @@ namespace Speedo_Loader
             this.MaximizeBox = false;
             this.Name = "UserInterface";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Speedo Loader";
+            this.Text = "Speedometer";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnExit);
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.picScreen)).EndInit();
