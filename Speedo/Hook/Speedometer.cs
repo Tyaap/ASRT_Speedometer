@@ -1,111 +1,343 @@
 ﻿using SharpDX;
 using SharpDX.Direct3D9;
+using Speedo.Interface;
 using System;
 
 namespace Speedo.Hook
 {
     internal class Speedometer : IDisposable
     {
-        private Vector3 vector = new Vector3(0.0f, 0.0f, 0.0f);
-        private readonly Sprite[] _numbers = new Sprite[3];
-        private float MaxSpeed = 275f;
-        private float MaxAngle = 243f;
-        private Sprite _dial;
-        private Texture carTexture;
-        private readonly Texture boatTexture;
-        private readonly Texture planeTexture;
-        private Texture needleTexture;
-        private readonly Texture numberTexture;
-        private readonly float _scale;
-        private readonly float _posX;
-        private readonly float _posY;
+        private const float ANGLE_RATIO = (float)Math.PI / 180f;
+        private Sprite Dial;
+        private readonly Texture BackgroundTexture;
+        private readonly Texture CarTexture;
+        private readonly Texture BoatTexture;
+        private readonly Texture PlaneTexture;
+        private readonly Texture NeedleTexture;
+        private readonly Texture SpeedFontTexture;
+        private readonly Texture BoostLevelFontTexture;
+        private readonly Texture VehicleFormFontTexture;
+        private readonly Texture GlowTexture;
+        private readonly Texture LightTexture;
+        DesignConfig Design;
+        FontLookup SpeedFontLookup;
+        FontLookup BoostLevelFontLookup;
+        FontLookup VehicleFormFontLookup;
 
-        public Speedometer(Device device, float scale, int x, int y)
+        private float SpeedoScale;
+        private Vector2 DialPos;
+        private Color BaseColour = Color.White;
+        public string Theme;
+        private bool DesignLoaded = false;
+
+        public Speedometer(Device device, SpeedoConfig config)
         {
-            _scale = scale;
-            _dial = new Sprite(device);
-            carTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\speedocar.png");
-            boatTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\speedoboat.png");
-            planeTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\speedoplane.png");
-            needleTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\needle.png");
-            numberTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Resources\\font.png");
-            FontLookup.ReadXML();
-            _posX = x;
-            _posY = y;
+            UpdateConfig(config);
+            try
+            {
+                Design = DesignLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Design.xml");
+                DesignLoaded = true;
+            }
+            catch
+            {
+                DXHook.DebugMessage("Failed to load asset: Design.xml");
+                config.Enabled = false;
+            }
+            Dial = new Sprite(device);
+            if (Design.Dial.Show)
+            {
+                try
+                {
+                    CarTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Car.png");
+                    BoatTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Boat.png");
+                    PlaneTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Plane.png");
+
+                    if (Design.Dial.ShowBackground)
+                    {
+                        try
+                        {
+                            BackgroundTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Background.png");
+                        }
+                        catch
+                        {
+                            DXHook.DebugMessage("Failed to load asset: Dial_Background.png");
+                            Design.Dial.ShowBackground = false;
+                        }
+                    }
+                    if (Design.Dial.ShowGlow)
+                    {
+                        try
+                        {
+                            GlowTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Glow.png");
+                        }
+                        catch
+                        {
+                            DXHook.DebugMessage("Failed to load asset: Glow.png");
+                            Design.Dial.ShowGlow = false;
+                        }
+                    }
+                }
+                catch
+                {
+                    DXHook.DebugMessage("Failed to load assets: Dial_Car.png, Dial_Boat.png, Dial_Plane.png");
+                    Design.Dial.Show = false;
+                }
+            }
+            if (Design.Needle.Show)
+            {
+                try
+                {
+                    NeedleTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Needle.png");
+                }
+                catch
+                {
+                    DXHook.DebugMessage("Failed to load asset: Needle.png");
+                    Design.Needle.Show = false;
+                }
+            }
+            if (Design.Speed.Show)
+            {
+                try
+                {
+                    SpeedFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
+                    SpeedFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
+                }
+                catch
+                {
+                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.Speed.FontName));
+                    Design.Speed.Show = false;
+                }
+            }
+            if (Design.BoostLevel.Show)
+            {
+                try
+                {
+                    BoostLevelFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
+                    BoostLevelFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
+                }
+                catch
+                {
+                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName));
+                    Design.BoostLevel.Show = false;
+                }
+            }
+            if (Design.VehicleForm.Show)
+            {
+                try
+                {
+                    VehicleFormFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
+                    VehicleFormFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
+                }
+                catch
+                {
+                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName));
+                    Design.VehicleForm.Show = false;
+                }
+            }
+            if (Design.StuntLight.Show)
+            {
+                try
+                {
+                    LightTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + config.Theme + "\\Light.png");
+                }
+                catch
+                {
+                    DXHook.DebugMessage("Failed to load asset: Light.png");
+                    Design.StuntLight.Show = false;
+                }
+            }
         }
 
-        public void Draw(float speed, Speed.CurrentModeEnum mode)
+        public void UpdateConfig(SpeedoConfig config)
         {
-            if (speed < 0.0)
+            SpeedoScale = config.Scale;
+            DialPos = new Vector2(config.PosX, config.PosY);
+            BaseColour.A = config.Opacity;
+            Theme = config.Theme;
+        }
+
+        public void Draw(float speed, VehicleForm form, int boostLevel, bool canStunt, bool dataAvailable)
+        {
+            if (!DesignLoaded)
             {
-                speed = -speed;
+                return;
             }
 
-            _dial.Begin(SpriteFlags.AlphaBlend);
-            _dial.Transform = MatrixTransformSpeedo();
-            DrawDial(mode);
-            RotateNeedle(speed);
-            _dial.Draw(needleTexture, Color.White * 0.9f, new Rectangle?(), new Vector3?(), new Vector3?());
-            DrawSpeed(speed, new Vector2(_posX + 161f * _scale, _posY + 214f * _scale));
-            _dial.End();
-        }
-
-        private void DrawSpeed(float speed, Vector2 startPos)
-        {
-            startPos.X += (float)(21.0 * _scale * 3.0);
-            char[] charArray = string.Format("{0:0}", speed).ToCharArray();
-            Array.Reverse(charArray);
-            foreach (char letter in new string(charArray))
+            Dial.Begin(SpriteFlags.AlphaBlend);
+            if (Design.Dial.Show)
             {
-                FontLocation letterLocation = FontLookup.FindLetterLocation(letter);
-                _dial.Transform = Matrix.Transformation2D(new Vector2(0.0f, 0.0f), 0.0f, new Vector2(_scale, _scale), new Vector2(0.0f, 0.0f), 0.0f, startPos);
-                Rectangle rectangle = new Rectangle(letterLocation.x, letterLocation.y, letterLocation.width, letterLocation.height);
-                _dial.Draw(numberTexture, Color.White * 0.9f, new Rectangle?(rectangle), new Vector3?(), new Vector3?());
-                startPos.X -= 21f * _scale;
+                if (Design.Dial.ShowBackground)
+                {
+                    DrawBackground();
+                }
+                if (Design.Dial.ShowGlow)
+                {
+                    DrawGlow(form, speed);
+                }
+                DrawDial(form);
             }
+            if (Design.Dial.ShowGlow)
+            {
+                DrawGlow(form, speed);
+            }
+            if (Design.Dial.Show)
+            {
+                DrawDial(form);
+            }
+            if (Design.Needle.Show)
+            {
+                DrawNeedle(form, speed);
+            }
+            if (Design.StuntLight.Show && canStunt)
+            {
+                DrawLight();
+            }
+            if (Design.Speed.Show)
+            {
+                DrawText(
+                    SpeedFontLookup, 
+                    SpeedFontTexture,
+                    DialPos + Design.Speed.Position * SpeedoScale,
+                    Design.Speed.FontSpacing,
+                    Design.Speed.FontScale,
+                    Design.Speed.TextCentred,
+                    string.Format(Design.Speed.TextFormat, speed));
+            }
+            if (Design.BoostLevel.Show && (boostLevel > 0 || !Design.BoostLevel.HideBoostLevelZero) && dataAvailable)
+            {
+                DrawText(
+                    BoostLevelFontLookup,
+                    BoostLevelFontTexture,
+                    DialPos + Design.BoostLevel.Position * SpeedoScale,
+                    Design.BoostLevel.FontSpacing,
+                    Design.BoostLevel.FontScale,
+                    Design.BoostLevel.TextCentred,
+                    string.Format(Design.BoostLevel.TextFormat, boostLevel));
+            }
+            if (Design.VehicleForm.Show && dataAvailable)
+            {
+                DrawText(
+                    VehicleFormFontLookup,
+                    VehicleFormFontTexture,
+                    DialPos + Design.VehicleForm.Position * SpeedoScale,
+                    Design.VehicleForm.FontSpacing,
+                    Design.VehicleForm.FontScale,
+                    Design.VehicleForm.TextCentred,
+                    string.Format(Design.VehicleForm.TextFormat, form));
+            }
+            Dial.End();
         }
 
-        public void DrawDial(Speed.CurrentModeEnum mode)
+        public void DrawBackground()
         {
-            switch (mode)
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos);
+            Dial.Draw(BackgroundTexture, BaseColour);
+        }
+
+        public void DrawDial(VehicleForm form)
+        {
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos);
+            switch (form)
             {
-                case Speed.CurrentModeEnum.Car:
-                    MaxSpeed = 275f;
-                    MaxAngle = 243f;
-                    _dial.Draw(carTexture, Color.White * 0.9f, new Rectangle?(), new Vector3?(), new Vector3?());
+                case VehicleForm.CAR:
+                    Dial.Draw(CarTexture, BaseColour);
                     break;
-                case Speed.CurrentModeEnum.Boat:
-                    MaxSpeed = 287f;
-                    MaxAngle = 243f;
-                    _dial.Draw(boatTexture, Color.White * 0.9f, new Rectangle?(), new Vector3?(), new Vector3?());
+                case VehicleForm.BOAT:
+                    Dial.Draw(BoatTexture, BaseColour);
                     break;
-                case Speed.CurrentModeEnum.Plane:
-                    MaxSpeed = 355f;
-                    MaxAngle = 243f;
-                    _dial.Draw(planeTexture, Color.White * 0.9f, new Rectangle?(), new Vector3?(), new Vector3?());
+                case VehicleForm.PLANE:
+                    Dial.Draw(PlaneTexture, BaseColour);
                     break;
             }
         }
 
-        public void RotateNeedle(float speed)
+        public void DrawNeedle(VehicleForm form, float speed)
         {
-            if (speed > MaxSpeed * 1.5)
+            float angleScale = (Design.Needle.MaxAngle - Design.Needle.MinAngle) / GetMaxSpeed(form);
+            float rotation = (Design.Needle.MinAngle + speed * angleScale) * ANGLE_RATIO;
+
+            if (rotation > Design.Needle.MaxAngle * ANGLE_RATIO)
             {
-                speed = MaxSpeed * 1.5f;
+                rotation = Design.Needle.MaxAngle * ANGLE_RATIO;
+                if (Design.Needle.MaxSpeedWobble)
+                {
+                    rotation += Design.Needle.WobbleAngle * (float)Math.Sin(Environment.TickCount / Design.Needle.WobblePeriod * Math.PI * 2f) * ANGLE_RATIO;
+                }
+            }
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale),
+                Design.Needle.PivotPosition * SpeedoScale, rotation, DialPos + (Design.Needle.Position - Design.Needle.PivotPosition) * SpeedoScale);
+            Dial.Draw(NeedleTexture, BaseColour);
+        }
+
+        private void DrawGlow(VehicleForm form, float speed)
+        {
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos + Design.Dial.GlowPosition * SpeedoScale);
+            float tmp = Math.Max(0f, speed - GetMaxSpeed(form) * Design.Dial.GlowStart_FractionOfMaxSpeed);
+            Design.Dial.GlowColour.A = (byte)(255f * Math.Min(1, tmp / GetMaxSpeed(form) / (1f - Design.Dial.GlowStart_FractionOfMaxSpeed)));
+            Dial.Draw(GlowTexture, Design.Dial.GlowColour);
+        }
+
+        private void DrawLight()
+        {
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos + Design.StuntLight.Position * SpeedoScale);
+            Dial.Draw(LightTexture, Design.StuntLight.Colour);
+        }
+
+        private void DrawText(FontLookup fontLookup, Texture fontTexture, Vector2 startPos, float spacing, float scaling, bool centred, string text)
+        {
+            char[] charArray = text.ToCharArray();
+            int length = charArray.Length;
+
+            FontLocation[] cache = null;
+            if (centred)
+            {
+                cache = new FontLocation[length];
+                float textLength = 0;
+                for (int i = 0; i < length; i++)
+                {
+                    cache[i] = fontLookup.FindLetterLocation(charArray[i]);
+                    textLength += fontLookup.FindLetterLocation(charArray[i]).width;
+                }
+                startPos.X -= (textLength + spacing * (length - 1)) * SpeedoScale * scaling / 2f;
             }
 
-            float x = 16f * _scale;
-            float y = 16f * _scale;
-            float rotation = (float)(MaxAngle / MaxSpeed * (double)speed * (Math.PI / 180.0));
-            _dial.Transform = Matrix.Transformation2D(new Vector2(0.0f, 0.0f), 0.0f, new Vector2(_scale, _scale), new Vector2(x, y), rotation, new Vector2(_posX + 128f * _scale - x, _posY + 128f * _scale - y));
+            for (int i = 0; i < length; i++)
+            {
+                FontLocation letterLocation;
+                if (cache != null)
+                {
+                    letterLocation = cache[i];
+                }
+                else
+                {
+                    letterLocation = fontLookup.FindLetterLocation(charArray[i]);
+                }
+                Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale) * scaling, Vector2.Zero, 0f, startPos);
+                Rectangle? rectangle = new Rectangle(letterLocation.x, letterLocation.y, letterLocation.width, letterLocation.height);
+                Dial.Draw(fontTexture, BaseColour, rectangle, new Vector3?(), new Vector3?());
+                startPos.X += (letterLocation.width + spacing) * SpeedoScale * scaling;
+            }
         }
 
-        private Matrix MatrixTransformSpeedo()
+        private float GetMaxSpeed(VehicleForm form)
         {
-            return Matrix.Transformation2D(new Vector2(0.0f, 0.0f), 0.0f, new Vector2(_scale, _scale), new Vector2(128f * _scale, 128f * _scale), 0.0f, new Vector2(_posX, _posY));
+            switch (form)
+            {
+                case VehicleForm.CAR:
+                    return Design.Speed.CarMaxSpeed;
+                case VehicleForm.BOAT:
+                    return Design.Speed.BoatMaxSpeed;
+                case VehicleForm.PLANE:
+                    return Design.Speed.PlaneMaxSpeed;
+                default:
+                    return 0f;
+            }
         }
 
-        public void Dispose() => Dispose(true);
+        public void Dispose()
+        {
+            Dispose(true);
+        }
 
         protected virtual void Dispose(bool disposing)
         {
@@ -114,12 +346,41 @@ namespace Speedo.Hook
                 return;
             }
 
-            carTexture.Dispose();
-            boatTexture.Dispose();
-            planeTexture.Dispose();
-            needleTexture.Dispose();
-            numberTexture.Dispose();
-            _dial.Dispose();
+            if (Design.Dial.Show)
+            {
+                CarTexture.Dispose();
+                BoatTexture.Dispose();
+                PlaneTexture.Dispose();
+                if (Design.Dial.ShowGlow)
+                {
+                    GlowTexture.Dispose();
+                }
+                if (Design.Dial.ShowBackground)
+                {
+                    BackgroundTexture.Dispose();
+                }
+            }
+            if (Design.Needle.Show)
+            {
+                NeedleTexture.Dispose();
+            }
+            if (Design.Speed.Show)
+            {
+                SpeedFontTexture.Dispose();
+            }
+            if (Design.BoostLevel.Show)
+            {
+                BoostLevelFontTexture.Dispose();
+            }
+            if (Design.VehicleForm.Show)
+            {
+                VehicleFormFontTexture.Dispose();
+            }
+            if (Design.StuntLight.Show)
+            {
+                LightTexture.Dispose();
+            }
+            Dial.Dispose();
         }
     }
 }

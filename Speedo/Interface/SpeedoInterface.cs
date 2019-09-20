@@ -1,19 +1,32 @@
 ﻿using System;
+using System.Timers;
+using System.Windows.Forms;
 
 namespace Speedo.Interface
 {
     [Serializable]
+    public delegate void PingEvent();
+    [Serializable]
+    public delegate void PingTimeoutEvent();
+    [Serializable]
+    public delegate void MessageReceivedEvent(MessageReceivedEventArgs message);
+    [Serializable]
+    public delegate void UpdateConfigEvent(UpdateConfigEventArgs message);
+
+    [Serializable]
     public class SpeedoInterface : MarshalByRefObject
     {
         public int ProcessId;
-
+        public event PingEvent PingEventHandler;
+        public event PingTimeoutEvent PingTimeoutEventHandler;
         public event MessageReceivedEvent RemoteMessageEventHandler;
+        public event UpdateConfigEvent UpdateConfigEventHandler;
+        public System.Timers.Timer pingTimer = new System.Timers.Timer(1500) { AutoReset = false };
+        public bool clientConnected = false;
 
-        public event DisconnectedEvent DisconnectedEventHandler;
-
-        public void Disconnect()
+        public SpeedoInterface()
         {
-            SafeInvokeDisconnected();
+            pingTimer.Elapsed += PingTimeout;
         }
 
         public void Message(MessageType messageType, string format, params object[] args)
@@ -23,13 +36,9 @@ namespace Speedo.Interface
 
         public void Message(MessageType messageType, string message)
         {
-            SafeInvokeMessageRecevied(new MessageReceivedEventArgs(messageType, message));
-        }
-
-        private void SafeInvokeMessageRecevied(MessageReceivedEventArgs eventArgs)
-        {
             if (RemoteMessageEventHandler != null)
             {
+                MessageReceivedEventArgs eventArgs = new MessageReceivedEventArgs(messageType, message);
                 MessageReceivedEvent messageReceivedEvent = null;
                 foreach (Delegate invocation in RemoteMessageEventHandler.GetInvocationList())
                 {
@@ -38,7 +47,7 @@ namespace Speedo.Interface
                         messageReceivedEvent = (MessageReceivedEvent)invocation;
                         messageReceivedEvent(eventArgs);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
                         RemoteMessageEventHandler -= messageReceivedEvent;
                     }
@@ -46,21 +55,22 @@ namespace Speedo.Interface
             }
         }
 
-        private void SafeInvokeDisconnected()
+        public void UpdateConfig(SpeedoConfig config)
         {
-            if (DisconnectedEventHandler != null)
+            if (UpdateConfigEventHandler != null)
             {
-                DisconnectedEvent disconnectedEvent = null;
-                foreach (Delegate invocation in DisconnectedEventHandler.GetInvocationList())
+                UpdateConfigEventArgs eventArgs = new UpdateConfigEventArgs(config);
+                UpdateConfigEvent updateConfigEvent = null;
+                foreach (Delegate invocation in UpdateConfigEventHandler.GetInvocationList())
                 {
                     try
                     {
-                        disconnectedEvent = (DisconnectedEvent)invocation;
-                        disconnectedEvent();
+                        updateConfigEvent = (UpdateConfigEvent)invocation;
+                        updateConfigEvent(eventArgs);
                     }
-                    catch (Exception)
+                    catch(Exception e)
                     {
-                        DisconnectedEventHandler -= disconnectedEvent;
+                        UpdateConfigEventHandler -= updateConfigEvent;
                     }
                 }
             }
@@ -68,6 +78,47 @@ namespace Speedo.Interface
 
         public void Ping()
         {
+            if (PingEventHandler != null)
+            {
+                foreach (Delegate invocation in PingEventHandler.GetInvocationList())
+                {
+                    PingEvent pingEvent = null;
+                    try
+                    {
+                        pingEvent = (PingEvent)invocation;
+                        pingEvent();
+                    }
+                    catch (Exception e)
+                    {
+                        PingEventHandler -= pingEvent;
+                    }
+                }
+            }
+
+            clientConnected = true;
+            pingTimer.Stop();
+            pingTimer.Start();
+        }
+
+        public void PingTimeout(object source, ElapsedEventArgs e)
+        {
+            if (PingTimeoutEventHandler != null)
+            {
+                foreach (Delegate invocation in PingTimeoutEventHandler.GetInvocationList())
+                {
+                    PingTimeoutEvent pingTimeoutEvent = null;
+                    try
+                    {
+                        pingTimeoutEvent = (PingTimeoutEvent)invocation;
+                        pingTimeoutEvent();
+                    }
+                    catch
+                    {
+                        PingTimeoutEventHandler -= pingTimeoutEvent;
+                    }
+                }
+            }
+            clientConnected = false;
         }
     }
 }

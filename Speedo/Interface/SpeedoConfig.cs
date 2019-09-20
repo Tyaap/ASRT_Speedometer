@@ -7,15 +7,21 @@ namespace Speedo.Interface
     {
         public int PosX;
         public int PosY;
-        public double Scale;
+        public float Scale;
+        public byte Opacity;
         public bool AlwaysShow;
+        public string Theme;
+        public bool Enabled;
 
         public SpeedoConfig()
         {
             PosX = 50;
             PosY = 120;
-            Scale = 1.0;
+            Scale = 1.0f;
+            Opacity = 255;
+            Theme = "Default";
             AlwaysShow = true;
+            Enabled = true;
         }
     }
 }

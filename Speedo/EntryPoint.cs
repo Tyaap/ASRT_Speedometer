@@ -15,48 +15,35 @@ namespace Speedo
     public class EntryPoint : IEntryPoint
     {
         private readonly IpcServerChannel _clientServerChannel;
-        private readonly SpeedoInterface _interface;
+        private SpeedoInterface _interface;
         private DXHook _directXHook;
-        private DisconnectedEventProxy _disconnectedEventProxy = new DisconnectedEventProxy();
-        private bool hostDisconnected = false;
+        private string _channelName;
 
         public EntryPoint(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
-            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
-           {
-               using (Stream manifestResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("AssemblyLoadingAndReflection." + new AssemblyName(args.Name).Name + ".dll"))
-               {
-                   byte[] numArray = new byte[manifestResourceStream.Length];
-                   manifestResourceStream.Read(numArray, 0, numArray.Length);
-                   return Assembly.Load(numArray);
-               }
-           };
-            _interface = RemoteHooking.IpcConnectClient<SpeedoInterface>(channelName);
-            _interface.Ping();
-            IDictionary properties = new Hashtable
-            {
-                ["name"] = channelName,
-                ["portName"] = channelName + Guid.NewGuid().ToString("N")
-            };
-
-            _clientServerChannel = new IpcServerChannel(properties, new BinaryServerFormatterSinkProvider()
-            {
-                TypeFilterLevel = TypeFilterLevel.Full
-            });
+            _channelName = channelName;
+            _clientServerChannel = new IpcServerChannel(
+                new Hashtable
+                {
+                    ["name"] = channelName,
+                    ["portName"] = channelName + Guid.NewGuid().ToString("N")
+                },
+                new BinaryServerFormatterSinkProvider()
+                {
+                    TypeFilterLevel = TypeFilterLevel.Full
+                });
 
             ChannelServices.RegisterChannel(_clientServerChannel, false);
+            _interface = RemoteHooking.IpcConnectClient<SpeedoInterface>(channelName);
         }
 
         public void Run(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
             _interface.Message(MessageType.Information, "Injected into process Id:{0}.", (object)RemoteHooking.GetCurrentProcessId());
-
             try
             {
-                _directXHook = new DXHook(_interface) { Config = config };
+                _directXHook = new DXHook(_interface, config);
                 _directXHook.Hook();
-                _disconnectedEventProxy.DisconnectedEventHandler += () => hostDisconnected = true;
-                _interface.DisconnectedEventHandler += new DisconnectedEvent(_disconnectedEventProxy.DisconnectedEventFire);
 
             }
             catch (Exception ex)
@@ -64,24 +51,34 @@ namespace Speedo
                 _interface.Message(MessageType.Error, "An unexpected error occured: {0}", (object)ex.ToString());
             }
 
-            try
+            while (_interface != null || _directXHook._config.Enabled)
             {
-                while (!hostDisconnected)
+                if (_interface == null)
                 {
-                    Thread.Sleep(1000);
-                    _interface.Ping();
+                    try
+                    {
+                        _interface = RemoteHooking.IpcConnectClient<SpeedoInterface>(_channelName);
+                        ChannelServices.RegisterChannel(_clientServerChannel, false);
+                    }
+                    catch { }
                 }
+                else
+                {
+                    try
+                    {
+                        _interface.Ping();
+                        DXHook.InitInterface(_interface);
+                    }
+                    catch
+                    {
+                        _interface = null;
+                    }
+                }
+                Thread.Sleep(1000);
             }
-            catch { }
-
-            _directXHook.Dispose();
-            try
-            {
-                _interface.Message(MessageType.Information, "Disconnecting from process {0}", (object)RemoteHooking.GetCurrentProcessId());
-            }
-            catch { }
 
             ChannelServices.UnregisterChannel(_clientServerChannel);
+            _directXHook.Dispose();
             Thread.Sleep(100);
         }
     }

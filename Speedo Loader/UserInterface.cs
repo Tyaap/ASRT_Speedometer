@@ -1,9 +1,16 @@
-﻿using Speedo;
+﻿using EasyHook;
+using Speedo;
 using Speedo.Interface;
 using System;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels.Ipc;
+using System.Security.Principal;
 using System.Threading;
+using System.Timers;
 using System.Windows.Forms;
 
 namespace Speedo_Loader
@@ -12,9 +19,7 @@ namespace Speedo_Loader
     {
         private IniFile ini = new IniFile(AppContext.BaseDirectory + "\\settings.ini");
         private bool dragging = false;
-        private int _picOverlayHeight;
-        private int _picOverlayWidth;
-        private SpeedoProcess _speedoProcess;
+        private bool speedoEnabled = false;
         private Button btnInject;
         private PictureBox picScreen;
         private TextBox txtDebugLog;
@@ -30,21 +35,50 @@ namespace Speedo_Loader
         private NumericUpDown nudScale;
         private Label label4;
 
+        private IpcServerChannel speedoServer;
+        private SpeedoInterface speedoInterface = new SpeedoInterface();
+        private string channelName = "Speedo";
+        private PingEvent speedoConnected;
+        private PingTimeoutEvent speedoDisconnected;
+
+        private string theme;
+        private TrackBar tbOpacity;
+        private Label label6;
+        private ComboBox cbTheme;
+        private Label label7;
+        private Bitmap overlayImage;
+
         public UserInterface()
         {
             InitializeComponent();
+
+            speedoConnected = new PingEvent(SpeedoConnected);
+            speedoDisconnected = new PingTimeoutEvent(SpeedoDisconnected);
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            _picOverlayHeight = picOverlay.Height;
-            _picOverlayWidth = picOverlay.Width;
-            picScreen.Image = new Bitmap(AppContext.BaseDirectory + "\\resources\\imagescreen.png");
-            picOverlay.Parent = picScreen;
-            picOverlay.Location = new Point(0, 0);
-            picOverlay.Image = new Bitmap(AppContext.BaseDirectory + "\\resources\\speedocar.png");
-            picOverlay.BackColor = Color.Transparent;
             IniRead();
+            InitInterfaceServer();
+
+            picOverlay.Parent = picScreen;
+            picOverlay.BackColor = Color.Transparent;
+            cbTheme.Items.AddRange(GetThemeList(AppContext.BaseDirectory + "\\Themes\\"));
+            CbTheme_TextChanged(null, null);
+
+            btnInject.Click += new System.EventHandler(BtnInject_Click);
+            cbAlwaysShow.CheckedChanged += new System.EventHandler(CbAlwaysShow_CheckedChanged);
+            picOverlay.Paint += new System.Windows.Forms.PaintEventHandler(PicOverlay_Paint);
+            picOverlay.MouseDown += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseDown);
+            picOverlay.MouseMove += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseMove);
+            picOverlay.MouseUp += new System.Windows.Forms.MouseEventHandler(PicOverlay_MouseUp);
+            cmbResolution.SelectedIndexChanged += new System.EventHandler(CmbResolution_SelectedIndexChanged);
+            cmbResolution.TextChanged += new System.EventHandler(CmbResolution_TextChanged);
+            nudPosX.ValueChanged += new System.EventHandler(NudPos_ValueChanged);
+            nudPosY.ValueChanged += new System.EventHandler(NudPos_ValueChanged);
+            nudScale.ValueChanged += new System.EventHandler(NudScale_ValueChanged);
+            tbOpacity.ValueChanged += new System.EventHandler(TbOpacity_ValueChanged);
+            cbTheme.TextChanged += new System.EventHandler(CbTheme_TextChanged);
         }
 
         private void OnExit(object sender, FormClosingEventArgs e)
@@ -59,6 +93,8 @@ namespace Speedo_Loader
             ini.IniWriteValue("General", "YPosition", nudPosY.Value.ToString());
             ini.IniWriteValue("General", "Scale", nudScale.Value.ToString());
             ini.IniWriteValue("General", "AlwaysShow", cbAlwaysShow.Checked.ToString());
+            ini.IniWriteValue("General", "Theme", theme);
+            ini.IniWriteValue("General", "Opacity", tbOpacity.Value.ToString());
         }
 
         private void IniRead()
@@ -78,15 +114,15 @@ namespace Speedo_Loader
             }
             else
             {
-                nudScale.Value = 1.2M;
+                nudScale.Value = 1.5M;
             }
-            if(decimal.TryParse(ini.IniReadValue("General", "XPosition"), out decimal x))
+            if (decimal.TryParse(ini.IniReadValue("General", "XPosition"), out decimal x))
             {
                 nudPosX.Value = x;
             }
             else
             {
-                nudPosX.Value = 1488;
+                nudPosX.Value = 1470;
             }
             if (decimal.TryParse(ini.IniReadValue("General", "YPosition"), out decimal y))
             {
@@ -94,7 +130,7 @@ namespace Speedo_Loader
             }
             else
             {
-                nudPosY.Value = 688;
+                nudPosY.Value = 686;
             }
             if (bool.TryParse(ini.IniReadValue("General", "AlwaysShow"), out bool alwaysShow))
             {
@@ -103,6 +139,20 @@ namespace Speedo_Loader
             else
             {
                 cbAlwaysShow.Checked = false;
+            }
+            theme = ini.IniReadValue("General", "Theme");
+            if (string.IsNullOrEmpty(cbTheme.Text) || !Directory.Exists(AppContext.BaseDirectory + "\\Themes\\" + cbTheme.Text))
+            {
+                theme = "Default";
+            }
+            cbTheme.Text = theme;
+            if (byte.TryParse(ini.IniReadValue("General", "Opacity"), out byte opacity))
+            {
+                tbOpacity.Value = opacity;
+            }
+            else
+            {
+                tbOpacity.Value = 255;
             }
         }
 
@@ -135,11 +185,11 @@ namespace Speedo_Loader
 
         private void NudPos_ValueChanged(object sender, EventArgs e)
         {
-            Point point = new Point(
+            UpdatePosition(new Point(
                 (int)Math.Floor(nudPosX.Value / ResolutionScaler.ResXMultiplier),
-                (int)Math.Floor(nudPosY.Value / ResolutionScaler.ResYMultiplier));
+                (int)Math.Floor(nudPosY.Value / ResolutionScaler.ResYMultiplier)));
 
-            UpdatePosition(point);
+            UpdateConfig();
         }
 
         private void UpdatePosition(Point point)
@@ -148,62 +198,109 @@ namespace Speedo_Loader
             picOverlay.Top = Math.Max(0, Math.Min(picScreen.Height - picOverlay.Height, point.Y));
         }
 
+        private void CbAlwaysShow_CheckedChanged(object sender, EventArgs e)
+        {
+            UpdateConfig();
+        }
+
         private void BtnInject_Click(object sender, EventArgs e)
         {
-            if (_speedoProcess == null)
+            if (speedoInterface.clientConnected)
             {
-                btnInject.Enabled = false;
-                AttachProcess();
+                speedoEnabled = !speedoEnabled;
+                UpdateConfig();
+                btnInject.Text = (speedoEnabled ? "Disable" : "Enable") + " Speedometer";
             }
             else
             {
-                _speedoProcess.SpeedoInterface.Disconnect();
-                _speedoProcess = null;
-            }
-            if (_speedoProcess != null)
-            {
-                btnInject.Text = "Unload Speedometer";
-                btnInject.Enabled = true;
-            }
-            else
-            {
-                btnInject.Text = "Load Speedometer";
-                btnInject.Enabled = true;
+                LoadSpeedo();
             }
         }
 
-        private void AttachProcess()
+        private void LoadSpeedo()
         {
-            foreach (Process process in Process.GetProcessesByName("ASN_App_PcDx9_Final"))
+            Process[] processes = Process.GetProcessesByName("ASN_App_PcDx9_Final");
+            if (processes.Length > 0)
             {
-                if (!(process.MainWindowHandle == IntPtr.Zero))
+                SpeedoConfig config = new SpeedoConfig()
                 {
-                    SpeedoConfig config = new SpeedoConfig()
-                    {
-                        PosX = (int)nudPosX.Value,
-                        PosY = (int)nudPosY.Value,
-                        Scale = (double)nudScale.Value,
-                        AlwaysShow = cbAlwaysShow.Checked
-                    };
-                    SpeedoInterface speedoInterface = new SpeedoInterface();
-                    speedoInterface.RemoteMessageEventHandler += new MessageReceivedEvent(SpeedoInterface_RemoteMessage);
-                    _speedoProcess = new SpeedoProcess(process, config, speedoInterface);
-                    _speedoProcess.SpeedoInterface.Message(MessageType.Debug, "Hook successful!");
-                    break;
-                }
+                    PosX = (int)nudPosX.Value,
+                    PosY = (int)nudPosY.Value,
+                    Scale = (float)nudScale.Value,
+                    AlwaysShow = cbAlwaysShow.Checked,
+                    Theme = theme,
+                    Opacity = (byte)tbOpacity.Value,
+                    Enabled = true
+                };
+                WriteMessageToLog(MessageType.Information, "Loading speedometer");
+                RemoteHooking.Inject(processes[0].Id, InjectionOptions.Default, typeof(SpeedoInterface).Assembly.Location, null, "Speedo", config);
             }
-            Thread.Sleep(10);
-            if (_speedoProcess != null)
+            else
             {
-                return;
+                MessageBox.Show("No executable found matching: 'ASN_App_PcDx9_Final'", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-            int num = (int)MessageBox.Show("No executable found matching: 'ASN_App_PcDx9_Final'", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        private void SpeedoInterface_RemoteMessage(MessageReceivedEventArgs message)
+        private void InitInterfaceServer()
         {
-            txtDebugLog.Invoke(new Action(() => txtDebugLog.Text = string.Format("{0}\r\n{1}", message, txtDebugLog.Text)));
+            speedoInterface.RemoteMessageEventHandler += new MessageReceivedEvent(WriteMessageToLog);
+            speedoInterface.PingEventHandler += speedoConnected;
+            speedoInterface.PingTimeoutEventHandler += speedoDisconnected;
+            speedoServer = RemoteHooking.IpcCreateServer(ref channelName, WellKnownObjectMode.Singleton, speedoInterface, new WellKnownSidType[] { WellKnownSidType.WorldSid });
+        }
+
+        private void SpeedoConnected()
+        {
+            speedoEnabled = true;
+            this.Invoke(new Action(() => btnInject.Text = "Disable Speedometer"));
+            speedoInterface.PingEventHandler -= speedoConnected;
+            this.Invoke(new Action(() => UpdateConfig()));
+            WriteMessageToLog(MessageType.Information, "Speedometer connected!");
+        }
+
+        private void SpeedoDisconnected()
+        {
+            speedoEnabled = false;
+            this.Invoke(new Action(() => btnInject.Text = "Enable Speedometer"));
+            speedoInterface.PingEventHandler += speedoConnected;
+            WriteMessageToLog(MessageType.Information, "Speedometer disconnected!");
+        }
+
+        private void WriteMessageToLog(MessageReceivedEventArgs message)
+        {
+            this.Invoke(new Action(() => txtDebugLog.Text = string.Concat(message + "\r\n", txtDebugLog.Text)));
+        }
+
+        private void WriteMessageToLog(MessageType messageType, string message)
+        {
+            WriteMessageToLog(new MessageReceivedEventArgs(messageType, message));
+        }
+
+        private void UpdateConfig()
+        {
+            speedoInterface.UpdateConfig(new SpeedoConfig()
+            {
+                PosX = (int)nudPosX.Value,
+                PosY = (int)nudPosY.Value,
+                Scale = (float)nudScale.Value,
+                AlwaysShow = cbAlwaysShow.Checked,
+                Opacity = (byte)tbOpacity.Value,
+                Theme = theme,
+                Enabled = speedoEnabled
+            });
+        }
+
+        private string[] GetThemeList(string path)
+        {
+            DirectoryInfo dir = new DirectoryInfo(path);
+            DirectoryInfo[] subDir = dir.GetDirectories();
+            int count = subDir.Length;
+            string[] themes = new string[count];
+            for (int i = 0; i < count; i++)
+            {
+                themes[i] = subDir[i].Name;
+            }
+            return themes;
         }
 
         private void CmbResolution_SelectedIndexChanged(object sender, EventArgs e)
@@ -226,30 +323,88 @@ namespace Speedo_Loader
         private void NudScale_ValueChanged(object sender, EventArgs e)
         {
             SetOverlaySizeScale(nudScale.Value);
+            UpdateConfig();
+        }
+
+        private void TbOpacity_ValueChanged(object sender, EventArgs e)
+        {
+            picOverlay.Image = AdjustAlpha(overlayImage, tbOpacity.Value / 255f);
+            UpdateConfig();
+        }
+
+        private void CbTheme_TextChanged(object sender, EventArgs e)
+        {
+            if (!string.IsNullOrEmpty(cbTheme.Text) && Directory.Exists(AppContext.BaseDirectory + "\\Themes\\" + cbTheme.Text))
+            {
+                theme = cbTheme.Text;
+                picScreen.Image = new Bitmap(AppContext.BaseDirectory + "\\Themes\\" + theme + "\\Game_Preview.png");
+                overlayImage = new Bitmap(AppContext.BaseDirectory + "\\Themes\\" + theme + "\\Speedo_Preview.png");
+                picOverlay.Image = AdjustAlpha(overlayImage, tbOpacity.Value / 255f);
+                CmbResolution_SelectedIndexChanged(null, null);
+            }
         }
 
         private void SetOverlaySizeScale(decimal scale)
         {
             Point point1 = new Point(picOverlay.Height, picOverlay.Width);
-            picOverlay.Width = (int)Math.Ceiling(_picOverlayWidth * scale / ResolutionScaler.ResXMultiplier);
-            picOverlay.Height = (int)Math.Ceiling(_picOverlayHeight * scale / ResolutionScaler.ResYMultiplier);
+            picOverlay.Width = (int)Math.Ceiling(overlayImage.Width * scale / ResolutionScaler.ResXMultiplier);
+            picOverlay.Height = (int)Math.Ceiling(overlayImage.Height * scale / ResolutionScaler.ResYMultiplier);
             NudPos_ValueChanged(null, null);
 
-            nudPosX.Maximum = Math.Max(0, Math.Ceiling(ResolutionScaler.ResX - 256 * scale));
-            nudPosY.Maximum = Math.Max(0, Math.Ceiling(ResolutionScaler.ResY - 256 * scale));
+            nudPosX.Maximum = Math.Max(0, Math.Ceiling(ResolutionScaler.ResX - overlayImage.Width * scale));
+            nudPosY.Maximum = Math.Max(0, Math.Ceiling(ResolutionScaler.ResY - overlayImage.Height * scale));
         }
 
         private void PicOverlay_Paint(object sender, PaintEventArgs e)
         {
             decimal num = nudScale.Value / ResolutionScaler.ResXMultiplier;
-            using (Font font = new Font("Arial", (int)Math.Round(new decimal(14) * num)))
+            using (Font font = new Font("Arial", (int)Math.Round(new decimal(14) * num), FontStyle.Bold))
             {
-                e.Graphics.DrawString("Drag me!", font, Brushes.Red, new Point((int)Math.Round(new decimal(85) * num), (int)Math.Round(new decimal(120) * num)));
+                e.Graphics.DrawString("Drag me!", font, Brushes.Red, new Point((int)Math.Round(new decimal(60) * num), (int)Math.Round(new decimal(90) * num)));
             }
+        }
+
+        // Adjust an image's translucency.
+        private Bitmap AdjustAlpha(Image image, float translucency)
+        {
+            // Make the ColorMatrix.
+            float t = translucency;
+            ColorMatrix cm = new ColorMatrix(new float[][]
+            {
+                new float[] {1, 0, 0, 0, 0},
+                new float[] {0, 1, 0, 0, 0},
+                new float[] {0, 0, 1, 0, 0},
+                new float[] {0, 0, 0, t, 0},
+                new float[] {0, 0, 0, 0, 1},
+            });
+            ImageAttributes attributes = new ImageAttributes();
+            attributes.SetColorMatrix(cm);
+
+            // Draw the image onto the new bitmap while
+            // applying the new ColorMatrix.
+            Point[] points =
+            {
+                new Point(0, 0),
+                new Point(image.Width, 0),
+                new Point(0, image.Height),
+            };
+            Rectangle rect = new Rectangle(0, 0, image.Width, image.Height);
+
+            // Make the result bitmap.
+            Bitmap bm = new Bitmap(image.Width, image.Height);
+            using (Graphics gr = Graphics.FromImage(bm))
+            {
+                gr.DrawImage(image, points, rect,
+                    GraphicsUnit.Pixel, attributes);
+            }
+
+            // Return the result.
+            return bm;
         }
 
         private void InitializeComponent()
         {
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(UserInterface));
             this.btnInject = new System.Windows.Forms.Button();
             this.picScreen = new System.Windows.Forms.PictureBox();
             this.txtDebugLog = new System.Windows.Forms.TextBox();
@@ -264,22 +419,26 @@ namespace Speedo_Loader
             this.nudPosX = new System.Windows.Forms.NumericUpDown();
             this.nudPosY = new System.Windows.Forms.NumericUpDown();
             this.nudScale = new System.Windows.Forms.NumericUpDown();
+            this.tbOpacity = new System.Windows.Forms.TrackBar();
+            this.label6 = new System.Windows.Forms.Label();
+            this.cbTheme = new System.Windows.Forms.ComboBox();
+            this.label7 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.picScreen)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picOverlay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudPosX)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudPosY)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudScale)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tbOpacity)).BeginInit();
             this.SuspendLayout();
             // 
             // btnInject
             // 
-            this.btnInject.Location = new System.Drawing.Point(10, 59);
+            this.btnInject.Location = new System.Drawing.Point(10, 30);
             this.btnInject.Name = "btnInject";
             this.btnInject.Size = new System.Drawing.Size(172, 35);
             this.btnInject.TabIndex = 0;
-            this.btnInject.Text = "Load Speedometer";
+            this.btnInject.Text = "Enable Speedometer";
             this.btnInject.UseVisualStyleBackColor = true;
-            this.btnInject.Click += new System.EventHandler(this.BtnInject_Click);
             // 
             // picScreen
             // 
@@ -310,7 +469,7 @@ namespace Speedo_Loader
             this.cbAlwaysShow.AutoSize = true;
             this.cbAlwaysShow.Checked = true;
             this.cbAlwaysShow.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cbAlwaysShow.Location = new System.Drawing.Point(40, 410);
+            this.cbAlwaysShow.Location = new System.Drawing.Point(40, 459);
             this.cbAlwaysShow.Name = "cbAlwaysShow";
             this.cbAlwaysShow.Size = new System.Drawing.Size(107, 23);
             this.cbAlwaysShow.TabIndex = 26;
@@ -320,7 +479,7 @@ namespace Speedo_Loader
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(10, 221);
+            this.label1.Location = new System.Drawing.Point(7, 166);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(123, 19);
             this.label1.TabIndex = 30;
@@ -329,7 +488,7 @@ namespace Speedo_Loader
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(16, 255);
+            this.label2.Location = new System.Drawing.Point(13, 200);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(110, 19);
             this.label2.TabIndex = 31;
@@ -340,14 +499,10 @@ namespace Speedo_Loader
             this.picOverlay.BackColor = System.Drawing.Color.Black;
             this.picOverlay.Location = new System.Drawing.Point(443, 117);
             this.picOverlay.Name = "picOverlay";
-            this.picOverlay.Size = new System.Drawing.Size(256, 256);
+            this.picOverlay.Size = new System.Drawing.Size(100, 50);
             this.picOverlay.SizeMode = System.Windows.Forms.PictureBoxSizeMode.StretchImage;
             this.picOverlay.TabIndex = 32;
             this.picOverlay.TabStop = false;
-            this.picOverlay.Paint += new System.Windows.Forms.PaintEventHandler(this.PicOverlay_Paint);
-            this.picOverlay.MouseDown += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseDown);
-            this.picOverlay.MouseMove += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseMove);
-            this.picOverlay.MouseUp += new System.Windows.Forms.MouseEventHandler(this.PicOverlay_MouseUp);
             // 
             // cmbResolution
             // 
@@ -367,18 +522,16 @@ namespace Speedo_Loader
             "2560x1440",
             "2560x1600",
             "3840x2160"});
-            this.cmbResolution.Location = new System.Drawing.Point(30, 149);
+            this.cmbResolution.Location = new System.Drawing.Point(30, 113);
             this.cmbResolution.Name = "cmbResolution";
             this.cmbResolution.Size = new System.Drawing.Size(133, 25);
             this.cmbResolution.TabIndex = 33;
             this.cmbResolution.Text = "???x???";
-            this.cmbResolution.SelectedIndexChanged += new System.EventHandler(this.CmbResolution_SelectedIndexChanged);
-            this.cmbResolution.TextChanged += new System.EventHandler(this.CmbResolution_TextChanged);
             // 
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(4, 127);
+            this.label3.Location = new System.Drawing.Point(4, 91);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(182, 19);
             this.label3.TabIndex = 34;
@@ -387,7 +540,7 @@ namespace Speedo_Loader
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(50, 314);
+            this.label5.Location = new System.Drawing.Point(50, 244);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(93, 19);
             this.label5.TabIndex = 36;
@@ -405,7 +558,7 @@ namespace Speedo_Loader
             // 
             // nudPosX
             // 
-            this.nudPosX.Location = new System.Drawing.Point(135, 220);
+            this.nudPosX.Location = new System.Drawing.Point(132, 163);
             this.nudPosX.Maximum = new decimal(new int[] {
             10000,
             0,
@@ -419,11 +572,10 @@ namespace Speedo_Loader
             0,
             0,
             0});
-            this.nudPosX.ValueChanged += new System.EventHandler(this.NudPos_ValueChanged);
             // 
             // nudPosY
             // 
-            this.nudPosY.Location = new System.Drawing.Point(135, 254);
+            this.nudPosY.Location = new System.Drawing.Point(132, 197);
             this.nudPosY.Maximum = new decimal(new int[] {
             10000,
             0,
@@ -437,7 +589,6 @@ namespace Speedo_Loader
             0,
             0,
             0});
-            this.nudPosY.ValueChanged += new System.EventHandler(this.NudPos_ValueChanged);
             // 
             // nudScale
             // 
@@ -447,7 +598,7 @@ namespace Speedo_Loader
             0,
             0,
             65536});
-            this.nudScale.Location = new System.Drawing.Point(66, 340);
+            this.nudScale.Location = new System.Drawing.Point(66, 270);
             this.nudScale.Maximum = new decimal(new int[] {
             5,
             0,
@@ -466,12 +617,52 @@ namespace Speedo_Loader
             0,
             0,
             0});
-            this.nudScale.ValueChanged += new System.EventHandler(this.NudScale_ValueChanged);
+            // 
+            // tbOpacity
+            // 
+            this.tbOpacity.Location = new System.Drawing.Point(29, 342);
+            this.tbOpacity.Maximum = 255;
+            this.tbOpacity.Name = "tbOpacity";
+            this.tbOpacity.Size = new System.Drawing.Size(123, 42);
+            this.tbOpacity.TabIndex = 44;
+            this.tbOpacity.TickFrequency = 32;
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Location = new System.Drawing.Point(40, 318);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(110, 19);
+            this.label6.TabIndex = 45;
+            this.label6.Text = "Overlay Opacity:";
+            // 
+            // cbTheme
+            // 
+            this.cbTheme.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
+            this.cbTheme.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
+            this.cbTheme.FormattingEnabled = true;
+            this.cbTheme.Location = new System.Drawing.Point(30, 408);
+            this.cbTheme.Name = "cbTheme";
+            this.cbTheme.Size = new System.Drawing.Size(121, 25);
+            this.cbTheme.TabIndex = 46;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Location = new System.Drawing.Point(39, 386);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(104, 19);
+            this.label7.TabIndex = 47;
+            this.label7.Text = "Overlay Theme:";
             // 
             // UserInterface
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(1002, 757);
+            this.Controls.Add(this.label7);
+            this.Controls.Add(this.cbTheme);
+            this.Controls.Add(this.label6);
+            this.Controls.Add(this.tbOpacity);
             this.Controls.Add(this.nudScale);
             this.Controls.Add(this.nudPosY);
             this.Controls.Add(this.nudPosX);
@@ -488,6 +679,7 @@ namespace Speedo_Loader
             this.Controls.Add(this.btnInject);
             this.Font = new System.Drawing.Font("Segoe UI", 10F);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "UserInterface";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
@@ -499,6 +691,7 @@ namespace Speedo_Loader
             ((System.ComponentModel.ISupportInitialize)(this.nudPosX)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudPosY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudScale)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.tbOpacity)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
