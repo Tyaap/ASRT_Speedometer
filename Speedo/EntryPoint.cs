@@ -21,6 +21,7 @@ namespace Speedo
 
         public EntryPoint(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
+            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             _channelName = channelName;
             _clientServerChannel = new IpcServerChannel(
                 new Hashtable

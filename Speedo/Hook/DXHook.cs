@@ -3,10 +3,12 @@ using SharpDX.Direct3D9;
 using Speedo.Interface;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading;
 
 namespace Speedo.Hook
 {
@@ -181,6 +183,7 @@ namespace Speedo.Hook
             {
                 if (!isInitialised)
                 {
+                    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
                     data = new Data(ProcessId);
                     speedo = new Speedometer(device, _config);
                     isInitialised = true;

@@ -143,7 +143,7 @@ namespace Speedo_Loader
             theme = ini.IniReadValue("General", "Theme");
             if (string.IsNullOrEmpty(cbTheme.Text) || !Directory.Exists(AppContext.BaseDirectory + "\\Themes\\" + cbTheme.Text))
             {
-                theme = "Default";
+                theme = "Xenn";
             }
             cbTheme.Text = theme;
             if (byte.TryParse(ini.IniReadValue("General", "Opacity"), out byte opacity))

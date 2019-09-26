@@ -13,28 +13,21 @@ namespace Speedo.Hook
         public char letter;
     }
 
-    public class FontLookup
+    public static class FontLookup
     {
-        public FontLocation[] Location;
-
-        public FontLookup(string xmlPath)
-        {
-            ReadXML(xmlPath);
-        }
-
-        public void ReadXML(string xmlPath)
+        public static FontLocation[] ReadXML(string xmlPath)
         {
             XmlDocument xmlDocument = new XmlDocument();
             xmlDocument.Load(xmlPath);
             XmlNodeList charElements = xmlDocument.SelectNodes("/root/char");
 
             int length = charElements.Count;
-            Location = new FontLocation[length];
+            FontLocation[] fontLocations = new FontLocation[length];
             XmlNode element;
             for (int i = 0; i < length; i++)
             {
                 element = charElements[i];
-                Location[i] = new FontLocation()
+                fontLocations[i] = new FontLocation()
                 {
                     letter = element.Attributes["id"].Value[0],
                     x = Convert.ToInt32(element.SelectSingleNode("x").InnerText),
@@ -43,11 +36,13 @@ namespace Speedo.Hook
                     height = Convert.ToInt32(element.SelectSingleNode("height").InnerText)
                 };
             }
+
+            return fontLocations;
         }
 
-        public FontLocation FindLetterLocation(char letter)
+        public static FontLocation FindLetterLocation(FontLocation[] FontLocations, char letter)
         {
-            return Array.Find(Location, a => a.letter == letter);
+            return Array.Find(FontLocations, a => a.letter == letter);
         }
     }
 }

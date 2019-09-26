@@ -33,10 +33,12 @@ namespace Speedo.Hook
     public struct DialConfig
     {
         public bool Show;
+        public Vector2 Position;
         public bool ShowBackground;
+        public Vector2 BackgroundPosition;
         public bool ShowGlow;
-        public Color GlowColour;
         public Vector2 GlowPosition;
+        public Color GlowColour;
         public float GlowStart_FractionOfMaxSpeed;
     }
     public struct NeedleConfig
@@ -123,7 +125,9 @@ namespace Speedo.Hook
             return new DialConfig()
             {
                 Show = bool.Parse(node.SelectSingleNode("show").InnerText),
+                Position = new Vector2(float.Parse(node.SelectSingleNode("x").InnerText), float.Parse(node.SelectSingleNode("y").InnerText)),
                 ShowBackground = bool.Parse(node.SelectSingleNode("show_background").InnerText),
+                BackgroundPosition = new Vector2(float.Parse(node.SelectSingleNode("background_x").InnerText), float.Parse(node.SelectSingleNode("background_y").InnerText)),
                 ShowGlow = bool.Parse(node.SelectSingleNode("show_glow").InnerText),
                 GlowPosition = new Vector2(float.Parse(node.SelectSingleNode("glow_x").InnerText), float.Parse(node.SelectSingleNode("glow_y").InnerText)),
                 GlowColour = ParseHTMLColour(node.SelectSingleNode("glow_colour").InnerText),

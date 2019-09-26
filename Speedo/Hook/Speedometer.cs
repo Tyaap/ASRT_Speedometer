@@ -20,12 +20,12 @@ namespace Speedo.Hook
         private readonly Texture GlowTexture;
         private readonly Texture LightTexture;
         DesignConfig Design;
-        FontLookup SpeedFontLookup;
-        FontLookup BoostLevelFontLookup;
-        FontLookup VehicleFormFontLookup;
+        FontLocation[] SpeedFontLookup;
+        FontLocation[] BoostLevelFontLookup;
+        FontLocation[] VehicleFormFontLookup;
 
         private float SpeedoScale;
-        private Vector2 DialPos;
+        private Vector2 SpeedoPos;
         private Color BaseColour = Color.White;
         public string Theme;
         private bool DesignLoaded = false;
@@ -99,7 +99,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    SpeedFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
+                    SpeedFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
                     SpeedFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
                 }
                 catch
@@ -112,7 +112,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    BoostLevelFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
+                    BoostLevelFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
                     BoostLevelFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
                 }
                 catch
@@ -125,7 +125,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    VehicleFormFontLookup = new FontLookup(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
+                    VehicleFormFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
                     VehicleFormFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
                 }
                 catch
@@ -151,7 +151,7 @@ namespace Speedo.Hook
         public void UpdateConfig(SpeedoConfig config)
         {
             SpeedoScale = config.Scale;
-            DialPos = new Vector2(config.PosX, config.PosY);
+            SpeedoPos = new Vector2(config.PosX, config.PosY);
             BaseColour.A = config.Opacity;
             Theme = config.Theme;
         }
@@ -197,7 +197,7 @@ namespace Speedo.Hook
                 DrawText(
                     SpeedFontLookup, 
                     SpeedFontTexture,
-                    DialPos + Design.Speed.Position * SpeedoScale,
+                    SpeedoPos + Design.Speed.Position * SpeedoScale,
                     Design.Speed.FontSpacing,
                     Design.Speed.FontScale,
                     Design.Speed.TextCentred,
@@ -208,7 +208,7 @@ namespace Speedo.Hook
                 DrawText(
                     BoostLevelFontLookup,
                     BoostLevelFontTexture,
-                    DialPos + Design.BoostLevel.Position * SpeedoScale,
+                    SpeedoPos + Design.BoostLevel.Position * SpeedoScale,
                     Design.BoostLevel.FontSpacing,
                     Design.BoostLevel.FontScale,
                     Design.BoostLevel.TextCentred,
@@ -219,7 +219,7 @@ namespace Speedo.Hook
                 DrawText(
                     VehicleFormFontLookup,
                     VehicleFormFontTexture,
-                    DialPos + Design.VehicleForm.Position * SpeedoScale,
+                    SpeedoPos + Design.VehicleForm.Position * SpeedoScale,
                     Design.VehicleForm.FontSpacing,
                     Design.VehicleForm.FontScale,
                     Design.VehicleForm.TextCentred,
@@ -230,13 +230,13 @@ namespace Speedo.Hook
 
         public void DrawBackground()
         {
-            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos);
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, SpeedoPos + Design.Dial.BackgroundPosition * SpeedoScale);
             Dial.Draw(BackgroundTexture, BaseColour);
         }
 
         public void DrawDial(VehicleForm form)
         {
-            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos);
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, SpeedoPos + Design.Dial.Position * SpeedoScale);
             switch (form)
             {
                 case VehicleForm.CAR:
@@ -265,13 +265,13 @@ namespace Speedo.Hook
                 }
             }
             Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale),
-                Design.Needle.PivotPosition * SpeedoScale, rotation, DialPos + (Design.Needle.Position - Design.Needle.PivotPosition) * SpeedoScale);
+                Design.Needle.PivotPosition * SpeedoScale, rotation, SpeedoPos + (Design.Needle.Position - Design.Needle.PivotPosition) * SpeedoScale);
             Dial.Draw(NeedleTexture, BaseColour);
         }
 
         private void DrawGlow(VehicleForm form, float speed)
         {
-            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos + Design.Dial.GlowPosition * SpeedoScale);
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, SpeedoPos + Design.Dial.GlowPosition * SpeedoScale);
             float tmp = Math.Max(0f, speed - GetMaxSpeed(form) * Design.Dial.GlowStart_FractionOfMaxSpeed);
             Design.Dial.GlowColour.A = (byte)(255f * Math.Min(1, tmp / GetMaxSpeed(form) / (1f - Design.Dial.GlowStart_FractionOfMaxSpeed)));
             Dial.Draw(GlowTexture, Design.Dial.GlowColour);
@@ -279,11 +279,11 @@ namespace Speedo.Hook
 
         private void DrawLight()
         {
-            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, DialPos + Design.StuntLight.Position * SpeedoScale);
+            Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale), Vector2.Zero, 0f, SpeedoPos + Design.StuntLight.Position * SpeedoScale);
             Dial.Draw(LightTexture, Design.StuntLight.Colour);
         }
 
-        private void DrawText(FontLookup fontLookup, Texture fontTexture, Vector2 startPos, float spacing, float scaling, bool centred, string text)
+        private void DrawText(FontLocation[] font, Texture fontTexture, Vector2 startPos, float spacing, float scaling, bool centred, string text)
         {
             char[] charArray = text.ToCharArray();
             int length = charArray.Length;
@@ -295,8 +295,8 @@ namespace Speedo.Hook
                 float textLength = 0;
                 for (int i = 0; i < length; i++)
                 {
-                    cache[i] = fontLookup.FindLetterLocation(charArray[i]);
-                    textLength += fontLookup.FindLetterLocation(charArray[i]).width;
+                    cache[i] = FontLookup.FindLetterLocation(font,charArray[i]);
+                    textLength += cache[i].width;
                 }
                 startPos.X -= (textLength + spacing * (length - 1)) * SpeedoScale * scaling / 2f;
             }
@@ -310,7 +310,7 @@ namespace Speedo.Hook
                 }
                 else
                 {
-                    letterLocation = fontLookup.FindLetterLocation(charArray[i]);
+                    letterLocation = FontLookup.FindLetterLocation(font, charArray[i]);
                 }
                 Dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(SpeedoScale, SpeedoScale) * scaling, Vector2.Zero, 0f, startPos);
                 Rectangle? rectangle = new Rectangle(letterLocation.x, letterLocation.y, letterLocation.width, letterLocation.height);

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding ="utf-8"?>
+<root>
+  <!-- Dial -->
+  <config id="dial">
+    <show>true</show>
+    <x>0</x>
+    <y>0</y>
+    <show_background>true</show_background>
+    <background_x>0</background_x>
+    <background_y>0</background_y>
+    <show_glow>true</show_glow>
+    <glow_x>0</glow_x>
+    <glow_y>0</glow_y>
+    <glow_colour>#FF0000</glow_colour>
+    <glow_start_fraction_of_max_speed>0.7</glow_start_fraction_of_max_speed>
+  </config>
+  <!-- Needle -->
+  <config id="needle">
+    <show>true</show>
+    <x>101.5</x>
+    <y>101.5</y>
+    <pivot_x>16</pivot_x>
+    <pivot_y>27</pivot_y>
+    <min_angle>45</min_angle>
+    <max_angle>270</max_angle>
+    <max_speed_wobble>true</max_speed_wobble>
+    <wobble_angle>3.4</wobble_angle>
+    <wobble_period_ms>125</wobble_period_ms>
+  </config>
+  <!-- Stunt Light -->
+  <config id="light">
+    <show>true</show>
+    <x>72</x>
+    <y>141.5</y>
+    <colour>#FF0000</colour>
+  </config>
+  <!-- Speed -->
+  <config id="speed">
+    <show>true</show>
+    <x>127</x>
+    <y>146</y>
+    <font_name>Font1</font_name>
+    <font_scale>1</font_scale>
+    <font_spacing>2</font_spacing>
+    <text_format>{0:000}</text_format>
+    <text_centred>true</text_centred>
+    <car_max_speed>275</car_max_speed>
+    <boat_max_speed>290</boat_max_speed>
+    <plane_max_speed>355</plane_max_speed>
+  </config>
+  <!-- Boost Level -->
+  <config id="boost">
+    <show>true</show>
+    <x>186</x>
+    <y>146</y>
+    <font_name>Font2</font_name>
+    <font_scale>0.198</font_scale>
+    <font_spacing>3</font_spacing>
+    <text_format>LVL. {0}</text_format>
+    <text_centred>false</text_centred>
+    <hide_boost_level_zero>true</hide_boost_level_zero>
+  </config>
+  <!-- Vehicle Form -->
+  <config id="form">
+    <show>true</show>
+    <x>164</x>
+    <y>116</y>
+    <font_name>Font2</font_name>
+    <font_scale>0.354</font_scale>
+    <font_spacing>3</font_spacing>
+    <text_format>{0}</text_format>
+    <text_centred>true</text_centred>
+  </config>
+</root>
