@@ -1,9 +1,12 @@
 # Speedometer
 A speedometer for Sonic &amp; All-Stars Racing Transformed.
 
-* Base code is from the speedometer made by Iceblade, thanks! :)
+* Original code is from the speedometer made by Iceblade, thanks! :)
 * Updated SharpDX, Easyhook, .NET to latest versions
-* Major code cleanup
+* Large code cleanup
 * Fixed a bunch of bugs/crashes
-* Resources now load from folder, instead of internally (potential for skinning)
+* Full custom theme support, using .png and .xml assets
+* Completely new default theme, designed by Xenn
 * Improved user interface
+* New graphical features/options: dial glow, needle wobbble, stunt light, transparency
+* Speedometer continues to run when the program window is closed
