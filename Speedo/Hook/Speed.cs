@@ -17,6 +17,9 @@ namespace Speedo.Hook
         public bool allStar;
         public bool available;
         private bool readSuccess;
+        private float lastTime = 0;
+        private float[] lastPosition = new float[3] { 0, 0, 0 };
+        private float lastSpeed = 0;
 
         public Data(int processId)
         {     
@@ -28,17 +31,63 @@ namespace Speedo.Hook
             UIntPtr tmp = ReadUIntPtr((UIntPtr)0xBCE920);
             UIntPtr playerBase = ReadUIntPtr(tmp + 4 * index);
 
-            speed = Math.Abs(ReadFloat(playerBase + 0xD81C) * 3.593f);
+            speed = GetSpeed(index) * 3.593f;
             racing = ReadBoolean(playerBase + 0xEB98);
             form = (VehicleForm)ReadInt(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERTRANSFORMSERVICE) + 0x1C);
             canStunt = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERSTUNT) + 0x30);
             allStar = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.ALLSTARPOWER) + 0x70);
             boostLevel = ReadInt(GetServiceAddress(playerBase + 0xC880, ServiceID.BOOSTSERVICE) + 0x10C);
             available = readSuccess;
+            if (!available)
+            {
+                speed = 0;
+                lastSpeed = 0;
+            }
             if (allStar)
             {
                 boostLevel = Math.Min(6, boostLevel + 3);
             }
+        }
+
+        public float GetSpeed(int index)
+        {
+            float time = GetTime();
+            float dt = time - lastTime;
+            float[] position = GetPosition(index);
+            float dl = Distance(position, lastPosition);
+            if (dl != 0 && dt != 0)
+            {
+                lastSpeed = dl / dt;
+                lastTime = time;
+                lastPosition = position;
+            }
+            return lastSpeed;
+        }
+
+        public float[] GetPosition(int index)
+        {
+            UIntPtr tmp = ReadUIntPtr((UIntPtr)0xBC3E28);
+            tmp = ReadUIntPtr(tmp + 0x160);
+            tmp = ReadUIntPtr(tmp + 0x8);
+            tmp = ReadUIntPtr(tmp + 0xD0);
+            tmp = ReadUIntPtr(tmp + 0x68);
+            tmp = ReadUIntPtr(tmp + 4 * index);
+            return new float[3] { ReadFloat(tmp + 0x170), ReadFloat(tmp + 0x174), ReadFloat(tmp + 0x178) };
+        }
+
+        public float Distance(float[] pos1, float[] pos2)
+        {
+            float d = 0;
+            for (int i = 0; i < 3; i++)
+            {
+                d += (pos1[i] - pos2[i]) * (pos1[i] - pos2[i]);
+            }
+            return (float)Math.Sqrt(d);
+        }
+
+        public float GetTime()
+        {
+            return ReadFloat((UIntPtr)0xBCE980);
         }
 
         public int GetPlayerIndex()
