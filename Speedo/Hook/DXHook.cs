@@ -9,6 +9,8 @@ using System.Runtime.InteropServices;
 using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
+using System.Windows.Forms;
+using static Speedo.NativeMethods;
 
 namespace Speedo.Hook
 {
@@ -19,10 +21,8 @@ namespace Speedo.Hook
         public SpeedoConfig _config;
         private LocalHook Direct3DDevice_ResetHook = null;
         private LocalHook Direct3DDevice_PresentHook = null;
-        private LocalHook Direct3DDevice_EndSceneHook = null;
         private Direct3D9Device_ResetDelegate Direct3DDevice_ResetOriginal = null;
         private Direct3D9Device_PresentDelegate Direct3DDevice_PresentOriginal = null;
-        private Direct3D9Device_EndSceneDelegate Direct3DDevice_EndSceneOriginal = null;
         private static InterfaceClientEventProxy _interfaceClientEventProxy = new InterfaceClientEventProxy();
         private bool isInitialised = false;
         private bool configUpdated = false;
@@ -30,7 +30,9 @@ namespace Speedo.Hook
         private const int D3D9_DEVICE_METHOD_COUNT = 119;
         private Data data;
         private Speedometer speedo;
-        private bool isUsingPresent = false;
+        UIntPtr myCodeAddress;
+        private byte[] originalCode;
+        UIntPtr processHandle;
 
         [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
         private delegate int Direct3D9Device_ResetDelegate(IntPtr device, ref PresentParameters presentParameters);
@@ -42,9 +44,6 @@ namespace Speedo.Hook
           IntPtr pDestRect,
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion);
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
-        private delegate int Direct3D9Device_EndSceneDelegate(IntPtr device);
 
         public DXHook(SpeedoInterface ssInterface, SpeedoConfig config)
         {
@@ -67,28 +66,33 @@ namespace Speedo.Hook
             DebugMessage("Determining function address for Direct3D9Device.");
             // First we need to determine the function address for IDirect3DDevice9 and 
             id3dDeviceFunctionAddresses = new List<IntPtr>();
+            IntPtr devicePtr = Marshal.ReadIntPtr((IntPtr)0xE99054);
+            id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(devicePtr, D3D9_DEVICE_METHOD_COUNT));
 
-            using (Device device = new Device(new Direct3D(), 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1 }))
-            {
-                id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D9_DEVICE_METHOD_COUNT));
-            }
-
-            // We want to hook IDirect3DDevice9::Present, IDirect3DDevice9::Reset and IDirect3DDevice9Ex::EndScene
+            // We want to hook IDirect3DDevice9::Present, IDirect3DDevice9::Reset
 
             // Get the original functions
             Direct3DDevice_ResetOriginal = (Direct3D9Device_ResetDelegate)Marshal.GetDelegateForFunctionPointer(
                 id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset], typeof(Direct3D9Device_ResetDelegate));
             Direct3DDevice_PresentOriginal = (Direct3D9Device_PresentDelegate)Marshal.GetDelegateForFunctionPointer(
                 id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present], typeof(Direct3D9Device_PresentDelegate));
-            Direct3DDevice_EndSceneOriginal = (Direct3D9Device_EndSceneDelegate)Marshal.GetDelegateForFunctionPointer(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.EndScene], typeof(Direct3D9Device_EndSceneDelegate));
 
             DebugMessage("Initialising hook.");
 
-            // Hook Present
-
+            // Hook Present - with improved compatability
+            processHandle = OpenProcess(0x38, false, RemoteHooking.GetCurrentProcessId());
+            myCodeAddress = VirtualAlloc(UIntPtr.Zero, 100, 0x3000, 0x40);
+            List<byte> myCode = new List<byte>(); 
+            // My code to change the call address
+            myCode.Add(0x57); // push edi
+            myCode.Add(0x57); // push edi
+            myCode.Add(0x51); // push ecx
+            myCode.AddRange(new byte[] { 0xE8, 0x05, 0x00, 0x00, 0x00 }); // call {next instruction + 6}
+            myCode.Add(0xE9); // jmp ...
+            myCode.AddRange(BitConverter.GetBytes(0x443e04 - ((int)myCodeAddress + myCode.Count + 4))); // ... 0x443e04
+            WriteProcessMemory(processHandle, myCodeAddress, myCode.ToArray(), myCode.Count, UIntPtr.Zero);    
             Direct3DDevice_PresentHook = LocalHook.Create(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present],
+                (IntPtr)(int)myCodeAddress + myCode.Count,
                 new Direct3D9Device_PresentDelegate(PresentHook),
                 this);
 
@@ -96,12 +100,6 @@ namespace Speedo.Hook
             Direct3DDevice_ResetHook = LocalHook.Create(
                 id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset],
                 new Direct3D9Device_ResetDelegate(ResetHook),
-                this);
-
-            // Hook EndScene
-            Direct3DDevice_EndSceneHook = LocalHook.Create(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.EndScene],
-                new Direct3D9Device_EndSceneDelegate(EndSceneHook),
                 this);
 
             /*
@@ -112,12 +110,16 @@ namespace Speedo.Hook
 
             DebugMessage("Hooking Direct3DDevice9::Present");
             Direct3DDevice_PresentHook.ThreadACL.SetExclusiveACL(new int[1]);
+            // Detour to my code
+            List<byte> detour = new List<byte>();
+            detour.Add(0xE9); // jmp ...
+            detour.AddRange(BitConverter.GetBytes((int)myCodeAddress - 0x443E04)); // .. codeAddress
+            originalCode = new byte[detour.Count];
+            ReadProcessMemory(processHandle, (UIntPtr)0x443DFF, originalCode, detour.Count, UIntPtr.Zero);
+            WriteProcessMemory(processHandle, (UIntPtr)0x443DFF, detour.ToArray(), detour.Count, UIntPtr.Zero);
 
             DebugMessage("Hooking Direct3DDevice9::Reset");
             Direct3DDevice_ResetHook.ThreadACL.SetExclusiveACL(new int[1]);
-
-            DebugMessage("Hooking Direct3DDevice9::EndScene");
-            Direct3DDevice_EndSceneHook.ThreadACL.SetExclusiveACL(new int[1]);
 
             DebugMessage("Hook complete.");
         }
@@ -134,9 +136,11 @@ namespace Speedo.Hook
                 DebugMessage("Removing Direct3D hook.");
                 try
                 {
+                    WriteProcessMemory(processHandle, (UIntPtr)0x443DFF, originalCode, originalCode.Length, UIntPtr.Zero);
+                    System.Threading.Thread.Sleep(100);
+                    VirtualFree(myCodeAddress, 100, 0x8000);
                     Direct3DDevice_PresentHook.Dispose();
                     Direct3DDevice_ResetHook.Dispose();
-                    Direct3DDevice_EndSceneHook.Dispose();
                     speedo.Dispose();
 
                     isInitialised = false;
@@ -159,22 +163,11 @@ namespace Speedo.Hook
           IntPtr hDestWindowOverride,
           IntPtr pDirtyRegion)
         {
-            isUsingPresent = true;
             if (_config.Enabled)
             {
                 DoSpeedoRenderTarget((Device)devicePtr);
             }
             return Direct3DDevice_PresentOriginal(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
-        }
-
-        private int EndSceneHook(IntPtr devicePtr)
-        {
-            if (!isUsingPresent && (int)HookRuntimeInfo.ReturnAddress != 0x447F31 && _config.Enabled)
-            {
-                DoSpeedoRenderTarget((Device)devicePtr);
-            }
-
-            return Direct3DDevice_EndSceneOriginal(devicePtr);
         }
 
         private void DoSpeedoRenderTarget(Device device)
@@ -184,7 +177,7 @@ namespace Speedo.Hook
                 if (!isInitialised)
                 {
                     Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-                    data = new Data(ProcessId);
+                    data = new Data(processHandle);
                     speedo = new Speedometer(device, _config);
                     isInitialised = true;
                 }

@@ -5,70 +5,91 @@ namespace Speedo
 {
     internal static class NativeMethods
     {
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern UIntPtr MapViewOfFile(
-          UIntPtr hFileMappingObject,
-          uint dwDesiredAccess,
-          uint dwFileOffsetHigh,
-          uint dwFileOffsetLow,
-          UIntPtr dwNumberOfBytesToMap);
+            UIntPtr hFileMappingObject,
+            uint dwDesiredAccess,
+            uint dwFileOffsetHigh,
+            uint dwFileOffsetLow,
+            UIntPtr dwNumberOfBytesToMap);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern bool UnmapViewOfFile(UIntPtr lpBaseAddress);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
+        [DllImport("advapi32", SetLastError = true)]
         internal static extern bool InitializeSecurityDescriptor(
-          ref SECURITY_DESCRIPTOR sd,
-          uint dwRevision);
+            ref SECURITY_DESCRIPTOR sd,
+            uint dwRevision);
 
-        [DllImport("advapi32.dll", SetLastError = true)]
+        [DllImport("advapi32", SetLastError = true)]
         internal static extern bool SetSecurityDescriptorDacl(
-          ref SECURITY_DESCRIPTOR sd,
-          bool daclPresent,
-          IntPtr dacl,
-          bool daclDefaulted);
+            ref SECURITY_DESCRIPTOR sd,
+            bool daclPresent,
+            IntPtr dacl,
+            bool daclDefaulted);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern UIntPtr CreateEvent(
-          ref SECURITY_ATTRIBUTES sa,
-          bool bManualReset,
-          bool bInitialState,
-          string lpName);
+            ref SECURITY_ATTRIBUTES sa,
+            bool bManualReset,
+            bool bInitialState,
+            string lpName);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern bool PulseEvent(UIntPtr hEvent);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern bool SetEvent(UIntPtr hEvent);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
         internal static extern UIntPtr CreateFileMapping(
-          UIntPtr hFile,
-          ref SECURITY_ATTRIBUTES lpFileMappingAttributes,
-          PageProtection flProtect,
-          uint dwMaximumSizeHigh,
-          uint dwMaximumSizeLow,
-          string lpName);
+            UIntPtr hFile,
+            ref SECURITY_ATTRIBUTES lpFileMappingAttributes,
+            PageProtection flProtect,
+            uint dwMaximumSizeHigh,
+            uint dwMaximumSizeLow,
+            string lpName);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern bool CloseHandle(UIntPtr hHandle);
 
         [DllImport("kernel32", SetLastError = true)]
         internal static extern int WaitForSingleObject(UIntPtr handle, uint milliseconds);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern UIntPtr OpenProcess(
-          int dwDesiredAccess,
-          bool bInheritHandle,
-          int dwProcessId);
+            int dwDesiredAccess,
+            bool bInheritHandle,
+            int dwProcessId);
 
-        [DllImport("kernel32.dll")]
+        [DllImport("kernel32", SetLastError = true)]
         internal static extern bool ReadProcessMemory(
-          UIntPtr hProcess,
-          UIntPtr lpBaseAddress,
-          byte[] lpBuffer,
-          UIntPtr dwSize,
-          UIntPtr lpNumberOfBytesRead);
+            UIntPtr hProcess,
+            UIntPtr lpBaseAddress,
+            byte[] lpBuffer,
+            int dwSize,
+            UIntPtr lpNumberOfBytesRead);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool WriteProcessMemory(
+            UIntPtr hProcess,
+            UIntPtr lpBaseAddress,
+            byte[] lpBuffer,
+            int nSize,
+            UIntPtr lpNumberOfBytesRead);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern UIntPtr VirtualAlloc(
+            UIntPtr lpAddress,
+            int dwSize,
+            int lAllocationType,
+            int flProtect);
+
+        [DllImport("kernel32", SetLastError = true)]
+        internal static extern bool VirtualFree(
+            UIntPtr lpAddress,
+            int dwSize,
+            int dwFreeType);
     }
 
     public struct SECURITY_DESCRIPTOR

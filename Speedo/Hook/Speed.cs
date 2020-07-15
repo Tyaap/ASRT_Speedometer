@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using static Speedo.NativeMethods;
 
@@ -21,9 +22,9 @@ namespace Speedo.Hook
         private float[] lastPosition = new float[3] { 0, 0, 0 };
         private float lastSpeed = 0;
 
-        public Data(int processId)
+        public Data(UIntPtr processHandle)
         {     
-            processHandle = OpenProcess(16, false, processId);
+            this.processHandle = processHandle;
         }
 
         public void GetData(int index)
@@ -134,28 +135,28 @@ namespace Speedo.Hook
         public int ReadInt(UIntPtr address)
         {
             byte[] lpBuffer = new byte[sizeof(int)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, (UIntPtr)sizeof(int), UIntPtr.Zero);
+            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(int), UIntPtr.Zero);
             return BitConverter.ToInt32(lpBuffer, 0);
         }
 
         public uint ReadUInt(UIntPtr address)
         {
             byte[] lpBuffer = new byte[sizeof(uint)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, (UIntPtr)sizeof(uint), UIntPtr.Zero);
+            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(uint), UIntPtr.Zero);
             return BitConverter.ToUInt32(lpBuffer, 0);
         }
 
         public float ReadFloat(UIntPtr address)
         {
             byte[] lpBuffer = new byte[sizeof(float)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, (UIntPtr)sizeof(float), UIntPtr.Zero);
+            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(float), UIntPtr.Zero);
             return BitConverter.ToSingle(lpBuffer, 0);
         }
 
         public bool ReadBoolean(UIntPtr address)
         {
             byte[] lpBuffer = new byte[sizeof(bool)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, (UIntPtr)sizeof(bool), UIntPtr.Zero);
+            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(bool), UIntPtr.Zero);
             return BitConverter.ToBoolean(lpBuffer, 0);
         }
 
@@ -167,7 +168,7 @@ namespace Speedo.Hook
         public byte ReadByte(UIntPtr address)
         {
             byte[] lpBuffer = new byte[1];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, (UIntPtr)1, UIntPtr.Zero);
+            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, 1, UIntPtr.Zero);
             return lpBuffer[0];
         }
     }
