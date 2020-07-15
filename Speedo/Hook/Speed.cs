@@ -21,7 +21,7 @@ namespace Speedo.Hook
         private float lastTime = 0;
         private float[] lastPosition = new float[3] { 0, 0, 0 };
         private float lastSpeed = 0;
-        private int cachedIndex = 0;
+        private int playerIndex = 0;
 
         public Data(UIntPtr processHandle)
         {     
@@ -98,11 +98,11 @@ namespace Speedo.Hook
             byte count = ReadByte(onlineBase + 0x525);
             if (count == 0) // offline race
             {
-                cachedIndex = 0;
+                playerIndex = 0;
             }
-            else if (ReadByte(onlineBase + 0x101D64 + 0xE) != 3) // Online race, use cached index if online race is in progress (lobbyState = 3).
+            else if (ReadByte(onlineBase + 0x101D64 + 0xE) != 3) // Online race, do not update index if race is in progress (lobbyState = 3).
             {
-                cachedIndex = 0;
+                playerIndex = 0;
                 for (int i = 0; i < count; i++) // iterate over player list
                 {
                     UIntPtr playerPtr = ReadUIntPtr(onlineBase + 0x528 + 4 * i);
@@ -110,10 +110,10 @@ namespace Speedo.Hook
                     {
                         break; // player found
                     }
-                    cachedIndex += ReadByte(playerPtr + 0x25D0); // + (number of local players)
+                    playerIndex += ReadByte(playerPtr + 0x25D0); // + (number of local players)
                 }
             }
-            return cachedIndex;
+            return playerIndex;
         }
 
         public UIntPtr GetServiceAddress(UIntPtr serviceList, ServiceID serviceId)
