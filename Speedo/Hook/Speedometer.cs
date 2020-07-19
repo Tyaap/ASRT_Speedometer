@@ -209,7 +209,7 @@ namespace Speedo.Hook
             {
                 DrawNeedle(form, speed);
             }
-            if (Design.StuntLight.Show && canStunt)
+            if (Design.StuntLight.Show && dataAvailable && canStunt)
             {
                 DrawLight();
             }
@@ -224,7 +224,7 @@ namespace Speedo.Hook
                     Design.Speed.TextCentred,
                     string.Format(Design.Speed.TextFormat, speed));
             }
-            if (Design.BoostLevel.Show && (boostLevel > 0 || !Design.BoostLevel.HideBoostLevelZero) && dataAvailable)
+            if (Design.BoostLevel.Show && dataAvailable && (boostLevel > 0 || !Design.BoostLevel.HideBoostLevelZero))
             {
                 DrawText(
                     BoostLevelFontLookup,

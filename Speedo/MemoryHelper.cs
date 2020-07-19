@@ -53,6 +53,24 @@ namespace Speedo
         }
 
 
+        public static uint ReadUInt(int address)
+        {
+            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
+        }
+        public static uint ReadUInt(uint address)
+        {
+            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
+        }
+        public static uint ReadUInt(IntPtr address)
+        {
+            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
+        }
+        public static uint ReadUInt(UIntPtr address)
+        {
+            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
+        }
+
+
         public static UIntPtr ReadUIntPtr(int address)
         {
             return (UIntPtr)ReadUInt(address);
@@ -73,39 +91,20 @@ namespace Speedo
 
         public static IntPtr ReadIntPtr(int address)
         {
-            return (IntPtr)ReadUInt(address);
+            return (IntPtr)ReadInt(address);
         }
         public static IntPtr ReadIntPtr(uint address)
         {
-            return (IntPtr)ReadUInt(address);
+            return (IntPtr)ReadInt(address);
         }
         public static IntPtr ReadIntPtr(IntPtr address)
         {
-            return (IntPtr)ReadUInt(address);
+            return (IntPtr)ReadInt(address);
         }
         public static IntPtr ReadIntPtr(UIntPtr address)
         {
-            return (IntPtr)ReadUInt(address);
+            return (IntPtr)ReadInt(address);
         }
-
-
-        public static uint ReadUInt(int address)
-        {
-            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
-        }
-        public static uint ReadUInt(uint address)
-        {
-            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
-        }
-        public static uint ReadUInt(IntPtr address)
-        {
-            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
-        }
-        public static uint ReadUInt(UIntPtr address)
-        {
-            return BitConverter.ToUInt32(ReadBytes(address, 4), 0);
-        }
-
 
         public static float ReadFloat(int address)
         {

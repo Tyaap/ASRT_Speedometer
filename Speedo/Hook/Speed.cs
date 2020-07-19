@@ -14,7 +14,6 @@ namespace Speedo.Hook
         public bool canStunt;
         public bool allStar;
         public bool available;
-        private bool readSuccess;
         private float lastTime = 0;
         private float[] lastPosition = new float[3] { 0, 0, 0 };
         private float lastSpeed = 0;
@@ -33,10 +32,11 @@ namespace Speedo.Hook
             speed = GetSpeed(index) * 3.593f;
             racing = ReadBoolean(playerBase + 0xEB98);
             form = (VehicleForm)ReadInt(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERTRANSFORMSERVICE) + 0x1C);
+            available = MemoryHelper.readSuccess;
             canStunt = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERSTUNT) + 0x30);
             allStar = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.ALLSTARPOWER) + 0x70);
             boostLevel = ReadInt(GetServiceAddress(playerBase + 0xC880, ServiceID.BOOSTSERVICE) + 0x10C);
-            available = readSuccess;
+            
             if (!available)
             {
                 speed = 0;
@@ -54,7 +54,7 @@ namespace Speedo.Hook
             float dt = time - lastTime;
             float[] position = GetPosition(index);
             float dl = Distance(position, lastPosition);
-            if (dl != 0 && dt != 0)
+            if (dt > 0.001)
             {
                 lastSpeed = dl / dt;
                 lastTime = time;
