@@ -19,7 +19,7 @@ namespace Speedo.Interface
             PosY = 120;
             Scale = 1.0f;
             Opacity = 255;
-            Theme = "Default";
+            Theme = "Xenn";
             AlwaysShow = true;
             Enabled = true;
         }

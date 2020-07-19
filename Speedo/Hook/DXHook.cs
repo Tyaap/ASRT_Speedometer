@@ -3,6 +3,7 @@ using SharpDX.Direct3D9;
 using Speedo.Interface;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -16,7 +17,7 @@ namespace Speedo.Hook
 {
     internal class DXHook : IDisposable
     {
-        public static SpeedoInterface _interface;
+        private SpeedoInterface _interface;
         public SpeedoConfig _config;
         private static InterfaceClientEventProxy _interfaceClientEventProxy = new InterfaceClientEventProxy();
         private Data _data;
@@ -36,60 +37,65 @@ namespace Speedo.Hook
         IntPtr preResetHookPtr;
         IntPtr postResetHookPtr;
 
-        public DXHook(SpeedoInterface ssInterface, SpeedoConfig config)
+        public DXHook(SpeedoInterface speedoInterface, SpeedoConfig config)
         {
             _config = config;
-            InitInterface(ssInterface);
+            InitInterface(speedoInterface);
             _interfaceClientEventProxy.UpdateConfig += new UpdateConfigEvent(UpdateConfig);
         }
 
-        public static void InitInterface(SpeedoInterface ssInterface)
+        public void InitInterface(SpeedoInterface speedoInterface)
         {
-            _interface = ssInterface;
+            _interface = speedoInterface;
             _interface.UpdateConfigEventHandler -= _interfaceClientEventProxy.UpdateConfigProxyHandler;
             _interface.UpdateConfigEventHandler += _interfaceClientEventProxy.UpdateConfigProxyHandler;
         }
 
         public void Hook()
-        {
-            _device = (Device)ReadIntPtr((IntPtr)0xE99054);
-            _data = new Data();
-            _speedo = new Speedometer(_device, _config);
-
-            if (ReadByte((IntPtr)0x443D40) != 0x90)
+        {    
+            try
             {
-                // Initialise the hook environment - supports up to 5 sets of present, pre-reset, post-reset hooks.
-                byte[] nops = new byte[0xA5];
-                for (int i = 0; i < 0xA5; i++)
+                if (ReadByte((IntPtr)0x443D40) != 0x90)
                 {
-                    nops[i] = 0x90;
+                    _interface.Message(MessageType.Debug, "Initialising hook environment");
+                    // Initialise the hook environment - supports up to 5 sets of present, pre-reset, post-reset hooks.
+                    byte[] nops = new byte[0xA5];
+                    for (int i = 0; i < 0xA5; i++)
+                    {
+                        nops[i] = 0x90;
+                    }
+                    Write((IntPtr)0x443D40, nops);
+                    // Present hook return
+                    Write((IntPtr)0x443D5A, new byte[] { 0xE9, 0x86, 0x00, 0x00, 0x00 });
+                    // Pre-reset hook call
+                    Write((IntPtr)0x4436AA, new byte[] { 0xE8, 0xB0, 0x06, 0x00, 0x00 });
+                    // Pre-reset hook return
+                    Write((IntPtr)0x443D78, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
+                    // Post-reset hook call
+                    Write((IntPtr)0x4436BC, new byte[] { 0xE8, 0xBD, 0x06, 0x00, 0x00 });
+                    // Post-reset hook return
+                    Write((IntPtr)0x443D97, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
                 }
-                Write((IntPtr)0x443D40, nops);
-                // Present hook return
-                Write((IntPtr)0x443D5A, new byte[] { 0xE9, 0x86, 0x00, 0x00, 0x00 });
-                // Pre-reset hook call
-                Write((IntPtr)0x4436AA, new byte[] { 0xE8, 0xB0, 0x06, 0x00, 0x00 });
-                // Pre-reset hook return
-                Write((IntPtr)0x443D78, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
-                // Post-reset hook call
-                Write((IntPtr)0x4436BC, new byte[] { 0xE8, 0xBD, 0x06, 0x00, 0x00 });
-                // Post-reset hook return
-                Write((IntPtr)0x443D97, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
+
+                drawOverlayFunction = new FunctionDelegate(DrawOverlay);
+                preResetFunction = new FunctionDelegate(PreReset);
+                postResetFunction = new FunctionDelegate(PostReset);
+                drawOverlayPtr = Marshal.GetFunctionPointerForDelegate(drawOverlayFunction);
+                preResetPtr = Marshal.GetFunctionPointerForDelegate(preResetFunction);
+                postResetPtr = Marshal.GetFunctionPointerForDelegate(postResetFunction);
+
+                _interface.Message(MessageType.Debug, "Enabling hooks");
+                // Present hook
+                presentHookPtr = EnableHook((IntPtr)0x443D41, drawOverlayPtr);
+                // Pre-reset hook
+                preResetHookPtr = EnableHook((IntPtr)0x443D5F, preResetPtr);
+                // Post-reset hook
+                postResetHookPtr = EnableHook((IntPtr)0x443D7E, postResetPtr);
             }
-
-            drawOverlayFunction = new FunctionDelegate(DrawOverlay);
-            preResetFunction = new FunctionDelegate(PreReset);
-            postResetFunction = new FunctionDelegate(PostReset);
-            drawOverlayPtr = Marshal.GetFunctionPointerForDelegate(drawOverlayFunction);
-            preResetPtr = Marshal.GetFunctionPointerForDelegate(preResetFunction);
-            postResetPtr = Marshal.GetFunctionPointerForDelegate(postResetFunction);
-
-            // Present hook
-            IntPtr presentHookPtr = EnableHook((IntPtr)0x443D41, drawOverlayPtr);
-            // Pre-reset hook
-            IntPtr preResetHookPtr = EnableHook((IntPtr)0x443D5F, preResetPtr);
-            // Post-reset hook
-            IntPtr postResetHookPtr = EnableHook((IntPtr)0x443D7E, postResetPtr);
+            catch(Exception e)
+            {
+                _interface.Message(MessageType.Error, e.ToString());
+            }
         }
 
         private IntPtr EnableHook(IntPtr hookListPtr, IntPtr functionPtr)
@@ -122,7 +128,6 @@ namespace Speedo.Hook
         {
             if (disposing)
             {
-                DebugMessage("Removing Direct3D hook.");
                 try
                 {
                     DisableHook(presentHookPtr);
@@ -131,10 +136,7 @@ namespace Speedo.Hook
                     System.Threading.Thread.Sleep(100);
                     _speedo.Dispose();
                 }
-                catch(Exception e)
-                {
-                    DebugMessage("Error: " + e.ToString());
-                }
+                catch { }
             }
         }
 
@@ -142,6 +144,13 @@ namespace Speedo.Hook
         {
             try
             {
+                if (_device == null)
+                {
+                    _interface.Message(MessageType.Debug, "Creating speedometer instance");
+                    _device = (Device)ReadIntPtr((IntPtr)0xE99054);
+                    _data = new Data();
+                    _speedo = new Speedometer(_device, _config);
+                }
                 if (configUpdated)
                 {
                     _speedo.UpdateConfig(_config);
@@ -155,18 +164,32 @@ namespace Speedo.Hook
             }
             catch (Exception e)
             {
-                DebugMessage("Error: " + e.ToString());
+                _interface.Message(MessageType.Error, e.ToString());
             }
         }
 
         private void PreReset()
         {
-            _speedo.OnLostDevice();
+            try
+            {
+                _speedo.OnLostDevice();
+            }
+            catch (Exception e)
+            {
+                _interface.Message(MessageType.Error, e.ToString());
+            }
         }
 
         private void PostReset()
         {
-            _speedo.OnResetDevice();
+            try
+            {
+                _speedo.OnResetDevice();
+            }
+            catch (Exception e)
+            {
+                _interface.Message(MessageType.Error, e.ToString());
+            }
         }
 
         private void UpdateConfig(UpdateConfigEventArgs args)
@@ -180,17 +203,6 @@ namespace Speedo.Hook
 
         private void PingRecieved()
         {
-        }
-
-        public static void DebugMessage(string message)
-        {
-            try
-            {
-                _interface.Message(MessageType.Debug, "Speedometer: " + message);
-            }
-            catch (RemotingException)
-            {
-            }
         }
     }
 }

@@ -29,16 +29,11 @@ namespace Speedo.Interface
             pingTimer.Elapsed += PingTimeout;
         }
 
-        public void Message(MessageType messageType, string format, params object[] args)
-        {
-            Message(messageType, string.Format(format, args));
-        }
-
-        public void Message(MessageType messageType, string message)
+        public void Message(MessageType messageType, string message, params object[] args)
         {
             if (RemoteMessageEventHandler != null)
             {
-                MessageReceivedEventArgs eventArgs = new MessageReceivedEventArgs(messageType, message);
+                MessageReceivedEventArgs eventArgs = new MessageReceivedEventArgs(messageType, string.Format(message, args));
                 MessageReceivedEvent messageReceivedEvent = null;
                 foreach (Delegate invocation in RemoteMessageEventHandler.GetInvocationList())
                 {

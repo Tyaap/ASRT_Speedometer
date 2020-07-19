@@ -9,6 +9,7 @@ using System.Runtime.Remoting.Channels;
 using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.Serialization.Formatters;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace Speedo
 {
@@ -21,7 +22,6 @@ namespace Speedo
 
         public EntryPoint(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
-            Thread.CurrentThread.CurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
             _channelName = channelName;
             _clientServerChannel = new IpcServerChannel(
                 new Hashtable
@@ -42,16 +42,8 @@ namespace Speedo
         public void Run(RemoteHooking.IContext context, string channelName, SpeedoConfig config)
         {
             _interface.Message(MessageType.Information, "Injected into process Id:{0}.", (object)RemoteHooking.GetCurrentProcessId());
-            try
-            {
-                _directXHook = new DXHook(_interface, config);
-                _directXHook.Hook();
-
-            }
-            catch (Exception ex)
-            {
-                _interface.Message(MessageType.Error, "An unexpected error occured: {0}", (object)ex.ToString());
-            }
+            _directXHook = new DXHook(_interface, config);
+            _directXHook.Hook();
 
             while (_interface != null || _directXHook._config.Enabled)
             {
@@ -69,7 +61,7 @@ namespace Speedo
                     try
                     {
                         _interface.Ping();
-                        DXHook.InitInterface(_interface);
+                        _directXHook.InitInterface(_interface);
                     }
                     catch
                     {

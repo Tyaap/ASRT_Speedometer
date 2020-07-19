@@ -11,8 +11,9 @@ namespace Speedo.Hook
 {
     internal class Speedometer : IDisposable
     {
+        private SpeedoInterface Interface;
         private Device Device;
-        private bool loaded;
+        private bool Loaded;
         private bool Enabled;
         private const float ANGLE_RATIO = (float)Math.PI / 180f;
         private Sprite Dial;
@@ -40,7 +41,6 @@ namespace Speedo.Hook
         {
             this.Device = Device;
             UpdateConfig(config);
-            Load();
         }
 
         public void Load()
@@ -52,7 +52,7 @@ namespace Speedo.Hook
             }
             catch
             {
-                DXHook.DebugMessage("Failed to load asset: Design.xml");
+                Interface.Message(MessageType.Error, "Failed to load asset: Design.xml");
                 Enabled = false;
             }
             Dial = new Sprite(Device);
@@ -72,7 +72,7 @@ namespace Speedo.Hook
                         }
                         catch
                         {
-                            DXHook.DebugMessage("Failed to load asset: Dial_Background.png");
+                            Interface.Message(MessageType.Warning, "Failed to load asset: Dial_Background.png");
                             Design.Dial.ShowBackground = false;
                         }
                     }
@@ -84,14 +84,14 @@ namespace Speedo.Hook
                         }
                         catch
                         {
-                            DXHook.DebugMessage("Failed to load asset: Glow.png");
+                            Interface.Message(MessageType.Warning, "Failed to load asset: Glow.png");
                             Design.Dial.ShowGlow = false;
                         }
                     }
                 }
                 catch
                 {
-                    DXHook.DebugMessage("Failed to load assets: Dial_Car.png, Dial_Boat.png, Dial_Plane.png");
+                    Interface.Message(MessageType.Warning, "Failed to load assets: Dial_Car.png, Dial_Boat.png, Dial_Plane.png");
                     Design.Dial.Show = false;
                 }
             }
@@ -103,7 +103,7 @@ namespace Speedo.Hook
                 }
                 catch
                 {
-                    DXHook.DebugMessage("Failed to load asset: Needle.png");
+                    Interface.Message(MessageType.Warning, "Failed to load asset: Needle.png");
                     Design.Needle.Show = false;
                 }
             }
@@ -116,7 +116,7 @@ namespace Speedo.Hook
                 }
                 catch
                 {
-                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.Speed.FontName));
+                    Interface.Message(MessageType.Warning, "Failed to load assets: {0}.png, {0}.xml", Design.Speed.FontName);
                     Design.Speed.Show = false;
                 }
             }
@@ -129,7 +129,8 @@ namespace Speedo.Hook
                 }
                 catch
                 {
-                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName));
+
+                    Interface.Message(MessageType.Warning, "Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName);
                     Design.BoostLevel.Show = false;
                 }
             }
@@ -142,7 +143,7 @@ namespace Speedo.Hook
                 }
                 catch
                 {
-                    DXHook.DebugMessage(string.Format("Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName));
+                    Interface.Message(MessageType.Warning, "Failed to load assets: {0}.png, {0}.xml", Design.BoostLevel.FontName);
                     Design.VehicleForm.Show = false;
                 }
             }
@@ -154,11 +155,11 @@ namespace Speedo.Hook
                 }
                 catch
                 {
-                    DXHook.DebugMessage("Failed to load asset: Light.png");
+                    Interface.Message(MessageType.Warning, "Failed to load asset: Light.png");
                     Design.StuntLight.Show = false;
                 }
             }
-            loaded = true;
+            Loaded = true;
         }
 
         public void UpdateConfig(SpeedoConfig config)
@@ -178,7 +179,7 @@ namespace Speedo.Hook
 
         public void Draw(float speed, VehicleForm form, int boostLevel, bool canStunt, bool dataAvailable)
         {
-            if (!Enabled || !loaded)
+            if (!Enabled || !Loaded)
             {
                 return;
             }
@@ -356,12 +357,12 @@ namespace Speedo.Hook
 
         public void OnLostDevice()
         {
-            Dial.OnLostDevice();
+            if (Dial != null) Dial.OnLostDevice();
         }
 
         public void OnResetDevice()
         {
-            Dial.OnResetDevice();
+            if (Dial != null) Dial.OnResetDevice();
         }
 
         public void Dispose()
@@ -379,14 +380,14 @@ namespace Speedo.Hook
             if (CarTexture != null && !CarTexture.IsDisposed) CarTexture.Dispose();
             if (BoatTexture != null && !BoatTexture.IsDisposed) BoatTexture.Dispose();
             if (PlaneTexture != null && !PlaneTexture.IsDisposed) PlaneTexture.Dispose();
-            if (GlowTexture != null && !GlowTexture.IsDisposed) BackgroundTexture.Dispose();
+            if (GlowTexture != null && !GlowTexture.IsDisposed) GlowTexture.Dispose();
             if (NeedleTexture != null && !NeedleTexture.IsDisposed) NeedleTexture.Dispose();
             if (SpeedFontTexture != null && !SpeedFontTexture.IsDisposed) SpeedFontTexture.Dispose();
             if (BoostLevelFontTexture != null && !BoostLevelFontTexture.IsDisposed) BoostLevelFontTexture.Dispose();
             if (VehicleFormFontTexture != null && !VehicleFormFontTexture.IsDisposed) VehicleFormFontTexture.Dispose();
             if (LightTexture != null && !LightTexture.IsDisposed) LightTexture.Dispose();
             if (Dial != null && !Dial.IsDisposed) Dial.Dispose();
-            loaded = false;
+            Loaded = false;
         }
     }
 }
