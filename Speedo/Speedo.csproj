@@ -53,6 +53,7 @@
     <Compile Include="Hook\DesignLookup.cs" />
     <Compile Include="Interface\InterfaceClientEventProxy.cs" />
     <Compile Include="Interface\UpdateConfigEventArgs.cs" />
+    <Compile Include="MemoryHelper.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="EntryPoint.cs" />
     <Compile Include="Hook\FontLookup.cs" />

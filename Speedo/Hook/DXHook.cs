@@ -10,40 +10,31 @@ using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Windows.Forms;
-using static Speedo.NativeMethods;
+using static Speedo.MemoryHelper;
 
 namespace Speedo.Hook
 {
     internal class DXHook : IDisposable
     {
-        private int _processId = 0;
         public static SpeedoInterface _interface;
         public SpeedoConfig _config;
-        private LocalHook Direct3DDevice_ResetHook = null;
-        private LocalHook Direct3DDevice_PresentHook = null;
-        private Direct3D9Device_ResetDelegate Direct3DDevice_ResetOriginal = null;
-        private Direct3D9Device_PresentDelegate Direct3DDevice_PresentOriginal = null;
         private static InterfaceClientEventProxy _interfaceClientEventProxy = new InterfaceClientEventProxy();
-        private bool isInitialised = false;
+        private Data _data;
+        private Speedometer _speedo;
         private bool configUpdated = false;
-        private List<IntPtr> id3dDeviceFunctionAddresses = new List<IntPtr>();
-        private const int D3D9_DEVICE_METHOD_COUNT = 119;
-        private Data data;
-        private Speedometer speedo;
-        UIntPtr myCodeAddress;
-        private byte[] originalCode;
-        UIntPtr processHandle;
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
-        private delegate int Direct3D9Device_ResetDelegate(IntPtr device, ref PresentParameters presentParameters);
+        public delegate void FunctionDelegate();
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall, CharSet = CharSet.Unicode, SetLastError = true)]
-        private delegate int Direct3D9Device_PresentDelegate(
-          IntPtr devicePtr,
-          IntPtr pSourceRect,
-          IntPtr pDestRect,
-          IntPtr hDestWindowOverride,
-          IntPtr pDirtyRegion);
+        Device _device;
+        FunctionDelegate drawOverlayFunction;
+        FunctionDelegate preResetFunction;
+        FunctionDelegate postResetFunction;
+        IntPtr drawOverlayPtr;
+        IntPtr preResetPtr;
+        IntPtr postResetPtr;
+        IntPtr presentHookPtr;
+        IntPtr preResetHookPtr;
+        IntPtr postResetHookPtr;
 
         public DXHook(SpeedoInterface ssInterface, SpeedoConfig config)
         {
@@ -61,67 +52,65 @@ namespace Speedo.Hook
 
         public void Hook()
         {
-            DebugMessage("Begin Direct3D9 hook.");
+            _device = (Device)ReadIntPtr((IntPtr)0xE99054);
+            _data = new Data();
+            _speedo = new Speedometer(_device, _config);
 
-            DebugMessage("Determining function address for Direct3D9Device.");
-            // First we need to determine the function address for IDirect3DDevice9 and 
-            id3dDeviceFunctionAddresses = new List<IntPtr>();
-            IntPtr devicePtr = Marshal.ReadIntPtr((IntPtr)0xE99054);
-            id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(devicePtr, D3D9_DEVICE_METHOD_COUNT));
+            if (ReadByte((IntPtr)0x443D40) != 0x90)
+            {
+                // Initialise the hook environment - supports up to 5 sets of present, pre-reset, post-reset hooks.
+                byte[] nops = new byte[0xA5];
+                for (int i = 0; i < 0xA5; i++)
+                {
+                    nops[i] = 0x90;
+                }
+                Write((IntPtr)0x443D40, nops);
+                // Present hook return
+                Write((IntPtr)0x443D5A, new byte[] { 0xE9, 0x86, 0x00, 0x00, 0x00 });
+                // Pre-reset hook call
+                Write((IntPtr)0x4436AA, new byte[] { 0xE8, 0xB0, 0x06, 0x00, 0x00 });
+                // Pre-reset hook return
+                Write((IntPtr)0x443D78, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
+                // Post-reset hook call
+                Write((IntPtr)0x4436BC, new byte[] { 0xE8, 0xBD, 0x06, 0x00, 0x00 });
+                // Post-reset hook return
+                Write((IntPtr)0x443D97, new byte[] { 0xA1, 0x54, 0x90, 0xE9, 0x00, 0xC3 });
+            }
 
-            // We want to hook IDirect3DDevice9::Present, IDirect3DDevice9::Reset
+            drawOverlayFunction = new FunctionDelegate(DrawOverlay);
+            preResetFunction = new FunctionDelegate(PreReset);
+            postResetFunction = new FunctionDelegate(PostReset);
+            drawOverlayPtr = Marshal.GetFunctionPointerForDelegate(drawOverlayFunction);
+            preResetPtr = Marshal.GetFunctionPointerForDelegate(preResetFunction);
+            postResetPtr = Marshal.GetFunctionPointerForDelegate(postResetFunction);
 
-            // Get the original functions
-            Direct3DDevice_ResetOriginal = (Direct3D9Device_ResetDelegate)Marshal.GetDelegateForFunctionPointer(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset], typeof(Direct3D9Device_ResetDelegate));
-            Direct3DDevice_PresentOriginal = (Direct3D9Device_PresentDelegate)Marshal.GetDelegateForFunctionPointer(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Present], typeof(Direct3D9Device_PresentDelegate));
+            // Present hook
+            IntPtr presentHookPtr = EnableHook((IntPtr)0x443D41, drawOverlayPtr);
+            // Pre-reset hook
+            IntPtr preResetHookPtr = EnableHook((IntPtr)0x443D5F, preResetPtr);
+            // Post-reset hook
+            IntPtr postResetHookPtr = EnableHook((IntPtr)0x443D7E, postResetPtr);
+        }
 
-            DebugMessage("Initialising hook.");
+        private IntPtr EnableHook(IntPtr hookListPtr, IntPtr functionPtr)
+        {
+            // Find a free hook slot
+            while (ReadByte(hookListPtr) != 0x90)
+            {
+                hookListPtr += 5;
+            }
+            // Assembly code
+            List<byte> callBytes = new List<byte>();
+            callBytes.Add(0xE8); // call ...
+            callBytes.AddRange(BitConverter.GetBytes(functionPtr.ToInt32() - hookListPtr.ToInt32() - 5)); // ... preResetFunction
+            Write(hookListPtr, callBytes.ToArray());
 
-            // Hook Present - with improved compatability
-            processHandle = OpenProcess(0x38, false, RemoteHooking.GetCurrentProcessId());
-            myCodeAddress = VirtualAlloc(UIntPtr.Zero, 100, 0x3000, 0x40);
-            List<byte> myCode = new List<byte>(); 
-            // My code to change the call address
-            myCode.Add(0x57); // push edi
-            myCode.Add(0x57); // push edi
-            myCode.Add(0x51); // push ecx
-            myCode.AddRange(new byte[] { 0xE8, 0x05, 0x00, 0x00, 0x00 }); // call {next instruction + 6}
-            myCode.Add(0xE9); // jmp ...
-            myCode.AddRange(BitConverter.GetBytes(0x443e04 - ((int)myCodeAddress + myCode.Count + 4))); // ... 0x443e04
-            WriteProcessMemory(processHandle, myCodeAddress, myCode.ToArray(), myCode.Count, UIntPtr.Zero);    
-            Direct3DDevice_PresentHook = LocalHook.Create(
-                (IntPtr)(int)myCodeAddress + myCode.Count,
-                new Direct3D9Device_PresentDelegate(PresentHook),
-                this);
+            return hookListPtr;
+        }
 
-            // Hook Reset
-            Direct3DDevice_ResetHook = LocalHook.Create(
-                id3dDeviceFunctionAddresses[(int)Direct3DDevice9FunctionOrdinals.Reset],
-                new Direct3D9Device_ResetDelegate(ResetHook),
-                this);
-
-            /*
-             * Don't forget that all hooks will start deactivated...
-             * The following ensures that all threads are intercepted:
-             * Note: you must do this for each hook.
-             */
-
-            DebugMessage("Hooking Direct3DDevice9::Present");
-            Direct3DDevice_PresentHook.ThreadACL.SetExclusiveACL(new int[1]);
-            // Detour to my code
-            List<byte> detour = new List<byte>();
-            detour.Add(0xE9); // jmp ...
-            detour.AddRange(BitConverter.GetBytes((int)myCodeAddress - 0x443E04)); // .. codeAddress
-            originalCode = new byte[detour.Count];
-            ReadProcessMemory(processHandle, (UIntPtr)0x443DFF, originalCode, detour.Count, UIntPtr.Zero);
-            WriteProcessMemory(processHandle, (UIntPtr)0x443DFF, detour.ToArray(), detour.Count, UIntPtr.Zero);
-
-            DebugMessage("Hooking Direct3DDevice9::Reset");
-            Direct3DDevice_ResetHook.ThreadACL.SetExclusiveACL(new int[1]);
-
-            DebugMessage("Hook complete.");
+        private void DisableHook(IntPtr hookPtr)
+        {
+            Write(hookPtr, new byte[] { 0x90, 0x90, 0x90, 0x90, 0x90 });
         }
 
         public void Dispose()
@@ -136,76 +125,48 @@ namespace Speedo.Hook
                 DebugMessage("Removing Direct3D hook.");
                 try
                 {
-                    WriteProcessMemory(processHandle, (UIntPtr)0x443DFF, originalCode, originalCode.Length, UIntPtr.Zero);
+                    DisableHook(presentHookPtr);
+                    DisableHook(preResetHookPtr);
+                    DisableHook(postResetHookPtr);
                     System.Threading.Thread.Sleep(100);
-                    VirtualFree(myCodeAddress, 100, 0x8000);
-                    Direct3DDevice_PresentHook.Dispose();
-                    Direct3DDevice_ResetHook.Dispose();
-                    speedo.Dispose();
-
-                    isInitialised = false;
+                    _speedo.Dispose();
                 }
-                catch { }
+                catch(Exception e)
+                {
+                    DebugMessage("Error: " + e.ToString());
+                }
             }
         }
 
-        private int ResetHook(IntPtr devicePtr, ref PresentParameters presentParameters)
-        {
-            speedo.Dispose();
-            isInitialised = false;
-            return Direct3DDevice_ResetOriginal(devicePtr, ref presentParameters);
-        }
-
-        private int PresentHook(
-          IntPtr devicePtr,
-          IntPtr pSourceRect,
-          IntPtr pDestRect,
-          IntPtr hDestWindowOverride,
-          IntPtr pDirtyRegion)
-        {
-            if (_config.Enabled)
-            {
-                DoSpeedoRenderTarget((Device)devicePtr);
-            }
-            return Direct3DDevice_PresentOriginal(devicePtr, pSourceRect, pDestRect, hDestWindowOverride, pDirtyRegion);
-        }
-
-        private void DoSpeedoRenderTarget(Device device)
+        private void DrawOverlay()
         {
             try
             {
-                if (!isInitialised)
-                {
-                    Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
-                    data = new Data(processHandle);
-                    speedo = new Speedometer(device, _config);
-                    isInitialised = true;
-                }
-
                 if (configUpdated)
                 {
-                    if (speedo.Theme.Equals(_config.Theme))
-                    {
-                        speedo.UpdateConfig(_config);
-                    }
-                    else
-                    {
-                        speedo.Dispose();
-                        speedo = new Speedometer(device, _config);
-                    }
+                    _speedo.UpdateConfig(_config);
                     configUpdated = false;
                 }
-
-                data.GetData(data.GetPlayerIndex());
-                if (data.racing || _config.AlwaysShow)
+                _data.GetData();
+                if (_data.racing || _config.AlwaysShow)
                 {
-                    speedo.Draw(data.speed, data.form, data.boostLevel, data.canStunt, data.available);
+                    _speedo.Draw(_data.speed, _data.form, _data.boostLevel, _data.canStunt, _data.available);
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                DebugMessage(ex.ToString());
+                DebugMessage("Error: " + e.ToString());
             }
+        }
+
+        private void PreReset()
+        {
+            _speedo.OnLostDevice();
+        }
+
+        private void PostReset()
+        {
+            _speedo.OnResetDevice();
         }
 
         private void UpdateConfig(UpdateConfigEventArgs args)
@@ -221,23 +182,6 @@ namespace Speedo.Hook
         {
         }
 
-        protected IntPtr[] GetVTblAddresses(IntPtr pointer, int numberOfMethods)
-        {
-            return GetVTblAddresses(pointer, 0, numberOfMethods);
-        }
-
-        protected IntPtr[] GetVTblAddresses(IntPtr pointer, int startIndex, int numberOfMethods)
-        {
-            List<IntPtr> numList = new List<IntPtr>();
-            IntPtr ptr = Marshal.ReadIntPtr(pointer);
-            for (int index = startIndex; index < startIndex + numberOfMethods; ++index)
-            {
-                numList.Add(Marshal.ReadIntPtr(ptr, index * IntPtr.Size));
-            }
-
-            return numList.ToArray();
-        }
-
         public static void DebugMessage(string message)
         {
             try
@@ -246,19 +190,6 @@ namespace Speedo.Hook
             }
             catch (RemotingException)
             {
-            }
-        }
-
-        protected int ProcessId
-        {
-            get
-            {
-                if (_processId == 0)
-                {
-                    _processId = RemoteHooking.GetCurrentProcessId();
-                }
-
-                return _processId;
             }
         }
     }

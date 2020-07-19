@@ -36,6 +36,7 @@ namespace Speedo
 
             ChannelServices.RegisterChannel(_clientServerChannel, false);
             _interface = RemoteHooking.IpcConnectClient<SpeedoInterface>(channelName);
+            MemoryHelper.Initialise();
         }
 
         public void Run(RemoteHooking.IContext context, string channelName, SpeedoConfig config)

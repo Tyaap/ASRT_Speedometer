@@ -1,24 +1,31 @@
-﻿using SharpDX;
+﻿using EasyHook;
+using SharpDX;
 using SharpDX.Direct3D9;
 using Speedo.Interface;
 using System;
+using System.CodeDom;
+using System.Globalization;
+using System.Threading;
 
 namespace Speedo.Hook
 {
     internal class Speedometer : IDisposable
     {
+        private Device Device;
+        private bool loaded;
+        private bool Enabled;
         private const float ANGLE_RATIO = (float)Math.PI / 180f;
         private Sprite Dial;
-        private readonly Texture BackgroundTexture;
-        private readonly Texture CarTexture;
-        private readonly Texture BoatTexture;
-        private readonly Texture PlaneTexture;
-        private readonly Texture NeedleTexture;
-        private readonly Texture SpeedFontTexture;
-        private readonly Texture BoostLevelFontTexture;
-        private readonly Texture VehicleFormFontTexture;
-        private readonly Texture GlowTexture;
-        private readonly Texture LightTexture;
+        private Texture BackgroundTexture;
+        private Texture CarTexture;
+        private Texture BoatTexture;
+        private Texture PlaneTexture;
+        private Texture NeedleTexture;
+        private Texture SpeedFontTexture;
+        private Texture BoostLevelFontTexture;
+        private Texture VehicleFormFontTexture;
+        private Texture GlowTexture;
+        private Texture LightTexture;
         DesignConfig Design;
         FontLocation[] SpeedFontLookup;
         FontLocation[] BoostLevelFontLookup;
@@ -28,35 +35,40 @@ namespace Speedo.Hook
         private Vector2 SpeedoPos;
         private Color BaseColour = Color.White;
         public string Theme;
-        private bool DesignLoaded = false;
 
-        public Speedometer(Device device, SpeedoConfig config)
+        public Speedometer(Device Device, SpeedoConfig config)
         {
+            this.Device = Device;
             UpdateConfig(config);
+            Load();
+        }
+
+        public void Load()
+        {
             try
             {
+                Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; // Consistent parsing of numbers in XML
                 Design = DesignLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Design.xml");
-                DesignLoaded = true;
             }
             catch
             {
                 DXHook.DebugMessage("Failed to load asset: Design.xml");
-                config.Enabled = false;
+                Enabled = false;
             }
-            Dial = new Sprite(device);
+            Dial = new Sprite(Device);
             if (Design.Dial.Show)
             {
                 try
                 {
-                    CarTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Car.png");
-                    BoatTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Boat.png");
-                    PlaneTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Plane.png");
+                    CarTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Car.png");
+                    BoatTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Boat.png");
+                    PlaneTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Plane.png");
 
                     if (Design.Dial.ShowBackground)
                     {
                         try
                         {
-                            BackgroundTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Background.png");
+                            BackgroundTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Background.png");
                         }
                         catch
                         {
@@ -68,7 +80,7 @@ namespace Speedo.Hook
                     {
                         try
                         {
-                            GlowTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Glow.png");
+                            GlowTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Glow.png");
                         }
                         catch
                         {
@@ -87,7 +99,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    NeedleTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Needle.png");
+                    NeedleTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Needle.png");
                 }
                 catch
                 {
@@ -100,7 +112,7 @@ namespace Speedo.Hook
                 try
                 {
                     SpeedFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
-                    SpeedFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
+                    SpeedFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
                 }
                 catch
                 {
@@ -113,7 +125,7 @@ namespace Speedo.Hook
                 try
                 {
                     BoostLevelFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
-                    BoostLevelFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
+                    BoostLevelFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
                 }
                 catch
                 {
@@ -126,7 +138,7 @@ namespace Speedo.Hook
                 try
                 {
                     VehicleFormFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
-                    VehicleFormFontTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
+                    VehicleFormFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
                 }
                 catch
                 {
@@ -138,7 +150,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    LightTexture = Texture.FromFile(device, AppContext.BaseDirectory + "\\Themes\\" + config.Theme + "\\Light.png");
+                    LightTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Light.png");
                 }
                 catch
                 {
@@ -146,19 +158,27 @@ namespace Speedo.Hook
                     Design.StuntLight.Show = false;
                 }
             }
+            loaded = true;
         }
 
         public void UpdateConfig(SpeedoConfig config)
         {
+            Enabled = config.Enabled;
             SpeedoScale = config.Scale;
             SpeedoPos = new Vector2(config.PosX, config.PosY);
             BaseColour.A = config.Opacity;
-            Theme = config.Theme;
+
+            if (Theme != config.Theme)
+            {
+                Theme = config.Theme;
+                this.Dispose();
+                this.Load();
+            }
         }
 
         public void Draw(float speed, VehicleForm form, int boostLevel, bool canStunt, bool dataAvailable)
         {
-            if (!DesignLoaded)
+            if (!Enabled || !loaded)
             {
                 return;
             }
@@ -334,6 +354,16 @@ namespace Speedo.Hook
             }
         }
 
+        public void OnLostDevice()
+        {
+            Dial.OnLostDevice();
+        }
+
+        public void OnResetDevice()
+        {
+            Dial.OnResetDevice();
+        }
+
         public void Dispose()
         {
             Dispose(true);
@@ -345,42 +375,18 @@ namespace Speedo.Hook
             {
                 return;
             }
-
-            if (Design.Dial.Show)
-            {
-                CarTexture.Dispose();
-                BoatTexture.Dispose();
-                PlaneTexture.Dispose();
-                if (Design.Dial.ShowGlow)
-                {
-                    GlowTexture.Dispose();
-                }
-                if (Design.Dial.ShowBackground)
-                {
-                    BackgroundTexture.Dispose();
-                }
-            }
-            if (Design.Needle.Show)
-            {
-                NeedleTexture.Dispose();
-            }
-            if (Design.Speed.Show)
-            {
-                SpeedFontTexture.Dispose();
-            }
-            if (Design.BoostLevel.Show)
-            {
-                BoostLevelFontTexture.Dispose();
-            }
-            if (Design.VehicleForm.Show)
-            {
-                VehicleFormFontTexture.Dispose();
-            }
-            if (Design.StuntLight.Show)
-            {
-                LightTexture.Dispose();
-            }
-            Dial.Dispose();
+            if (BackgroundTexture != null && !BackgroundTexture.IsDisposed) BackgroundTexture.Dispose();
+            if (CarTexture != null && !CarTexture.IsDisposed) CarTexture.Dispose();
+            if (BoatTexture != null && !BoatTexture.IsDisposed) BoatTexture.Dispose();
+            if (PlaneTexture != null && !PlaneTexture.IsDisposed) PlaneTexture.Dispose();
+            if (GlowTexture != null && !GlowTexture.IsDisposed) BackgroundTexture.Dispose();
+            if (NeedleTexture != null && !NeedleTexture.IsDisposed) NeedleTexture.Dispose();
+            if (SpeedFontTexture != null && !SpeedFontTexture.IsDisposed) SpeedFontTexture.Dispose();
+            if (BoostLevelFontTexture != null && !BoostLevelFontTexture.IsDisposed) BoostLevelFontTexture.Dispose();
+            if (VehicleFormFontTexture != null && !VehicleFormFontTexture.IsDisposed) VehicleFormFontTexture.Dispose();
+            if (LightTexture != null && !LightTexture.IsDisposed) LightTexture.Dispose();
+            if (Dial != null && !Dial.IsDisposed) Dial.Dispose();
+            loaded = false;
         }
     }
 }

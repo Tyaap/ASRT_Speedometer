@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using static Speedo.NativeMethods;
+using static Speedo.MemoryHelper;
 
 namespace Speedo.Hook
 {
     public class Data
     {     
-        private UIntPtr processHandle;
-        UIntPtr ptrSize = (UIntPtr)IntPtr.Size;
-        UIntPtr floatSize = (UIntPtr)Marshal.SizeOf(typeof(float));
         public float speed;
         public VehicleForm form;
         public bool racing;
@@ -23,9 +20,9 @@ namespace Speedo.Hook
         private float lastSpeed = 0;
         private int playerIndex = 0;
 
-        public Data(UIntPtr processHandle)
-        {     
-            this.processHandle = processHandle;
+        public void GetData()
+        {
+            GetData(GetPlayerIndex());
         }
 
         public void GetData(int index)
@@ -135,46 +132,6 @@ namespace Speedo.Hook
                 index++;
             }
             return UIntPtr.Zero;
-        }
-
-        public int ReadInt(UIntPtr address)
-        {
-            byte[] lpBuffer = new byte[sizeof(int)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(int), UIntPtr.Zero);
-            return BitConverter.ToInt32(lpBuffer, 0);
-        }
-
-        public uint ReadUInt(UIntPtr address)
-        {
-            byte[] lpBuffer = new byte[sizeof(uint)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(uint), UIntPtr.Zero);
-            return BitConverter.ToUInt32(lpBuffer, 0);
-        }
-
-        public float ReadFloat(UIntPtr address)
-        {
-            byte[] lpBuffer = new byte[sizeof(float)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(float), UIntPtr.Zero);
-            return BitConverter.ToSingle(lpBuffer, 0);
-        }
-
-        public bool ReadBoolean(UIntPtr address)
-        {
-            byte[] lpBuffer = new byte[sizeof(bool)];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, sizeof(bool), UIntPtr.Zero);
-            return BitConverter.ToBoolean(lpBuffer, 0);
-        }
-
-        public UIntPtr ReadUIntPtr(UIntPtr address)
-        {
-            return (UIntPtr)ReadUInt(address);
-        }
-
-        public byte ReadByte(UIntPtr address)
-        {
-            byte[] lpBuffer = new byte[1];
-            readSuccess = ReadProcessMemory(processHandle, address, lpBuffer, 1, UIntPtr.Zero);
-            return lpBuffer[0];
         }
     }
 }
