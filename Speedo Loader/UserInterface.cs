@@ -112,6 +112,7 @@ namespace Speedo_Loader
             ini.IniWriteValue("General", "Theme", theme);
             ini.IniWriteValue("General", "Opacity", tbOpacity.Value.ToString());
             ini.IniWriteValue("General", "SpeedType", cbSpeedType.SelectedIndex.ToString());
+            ini.IniWriteValue("General", "SmoothingFrames", nudSmoothingFrames.Value.ToString());
         }
 
         private void IniRead()
