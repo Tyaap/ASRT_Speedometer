@@ -1,24 +1,29 @@
 ﻿using System.Runtime.InteropServices;
 using System.Text;
 
-namespace Speedo_Loader
+public static class NativeMethods
 {
-    internal static class NativeMethods
-    {
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        internal static extern int WritePrivateProfileString(
-          string section,
-          string key,
-          string val,
-          string filePath);
+    [DllImport("injector", CallingConvention = CallingConvention.Cdecl)]
+    public static extern bool Inject(
+        int processId,
+        string dllName,
+        string exportName,
+        [MarshalAs(UnmanagedType.LPWStr)] string exportArgument);
 
-        [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
-        internal static extern int GetPrivateProfileString(
-          string section,
-          string key,
-          string def,
-          StringBuilder retVal,
-          int size,
-          string filePath);
-    }
+
+    [DllImport("kernel32", CharSet = CharSet.Unicode)]
+    internal static extern int WritePrivateProfileString(
+        string section,
+        string key,
+        string val,
+        string filePath);
+
+    [DllImport("kernel32", CharSet = CharSet.Unicode)]
+    internal static extern int GetPrivateProfileString(
+        string section,
+        string key,
+        string def,
+        StringBuilder retVal,
+        int size,
+        string filePath);
 }

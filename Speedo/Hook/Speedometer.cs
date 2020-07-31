@@ -1,16 +1,17 @@
-﻿using EasyHook;
-using SharpDX;
+﻿using SharpDX;
 using SharpDX.Direct3D9;
 using Speedo.Interface;
 using System;
 using System.CodeDom;
 using System.Globalization;
+using System.IO;
 using System.Threading;
 
 namespace Speedo.Hook
 {
     internal class Speedometer : IDisposable
     {
+        private readonly string baseDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
         private SpeedoInterface Interface;
         private Device Device;
         private bool Loaded;
@@ -48,7 +49,7 @@ namespace Speedo.Hook
             try
             {
                 Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; // Consistent parsing of numbers in XML
-                Design = DesignLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Design.xml");
+                Design = DesignLookup.ReadXML(baseDirectory + "\\Themes\\" + Theme + "\\Design.xml");
             }
             catch
             {
@@ -60,15 +61,15 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    CarTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Car.png");
-                    BoatTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Boat.png");
-                    PlaneTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Plane.png");
+                    CarTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Dial_Car.png");
+                    BoatTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Dial_Boat.png");
+                    PlaneTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Dial_Plane.png");
 
                     if (Design.Dial.ShowBackground)
                     {
                         try
                         {
-                            BackgroundTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Dial_Background.png");
+                            BackgroundTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Dial_Background.png");
                         }
                         catch
                         {
@@ -80,7 +81,7 @@ namespace Speedo.Hook
                     {
                         try
                         {
-                            GlowTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Glow.png");
+                            GlowTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Glow.png");
                         }
                         catch
                         {
@@ -99,7 +100,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    NeedleTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Needle.png");
+                    NeedleTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Needle.png");
                 }
                 catch
                 {
@@ -111,8 +112,8 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    SpeedFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
-                    SpeedFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
+                    SpeedFontLookup = FontLookup.ReadXML(baseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".xml");
+                    SpeedFontTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\" + Design.Speed.FontName + ".png");
                 }
                 catch
                 {
@@ -124,8 +125,8 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    BoostLevelFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
-                    BoostLevelFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
+                    BoostLevelFontLookup = FontLookup.ReadXML(baseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".xml");
+                    BoostLevelFontTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\" + Design.BoostLevel.FontName + ".png");
                 }
                 catch
                 {
@@ -138,8 +139,8 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    VehicleFormFontLookup = FontLookup.ReadXML(AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
-                    VehicleFormFontTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
+                    VehicleFormFontLookup = FontLookup.ReadXML(baseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".xml");
+                    VehicleFormFontTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\" + Design.VehicleForm.FontName + ".png");
                 }
                 catch
                 {
@@ -151,7 +152,7 @@ namespace Speedo.Hook
             {
                 try
                 {
-                    LightTexture = Texture.FromFile(Device, AppContext.BaseDirectory + "\\Themes\\" + Theme + "\\Light.png");
+                    LightTexture = Texture.FromFile(Device, baseDirectory + "\\Themes\\" + Theme + "\\Light.png");
                 }
                 catch
                 {

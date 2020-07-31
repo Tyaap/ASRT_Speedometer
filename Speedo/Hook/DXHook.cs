@@ -1,5 +1,4 @@
-﻿using EasyHook;
-using SharpDX.Direct3D9;
+﻿using SharpDX.Direct3D9;
 using Speedo.Interface;
 using System;
 using System.Collections.Generic;
@@ -11,20 +10,17 @@ using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Windows.Forms;
-using static Speedo.MemoryHelper;
+using static MemoryHelper;
+using static Program.Program;
 
 namespace Speedo.Hook
 {
-    internal class DXHook : IDisposable
+    public class DXHook : IDisposable
     {
-        private SpeedoInterface _interface;
-        public SpeedoConfig _config;
-        private static InterfaceClientEventProxy _interfaceClientEventProxy = new InterfaceClientEventProxy();
-        private Data _data;
-        private Speedometer _speedo;
-        private bool configUpdated = false;
+        private Data data;
+        private Speedometer speedometer;
 
-        public delegate void FunctionDelegate();
+        private delegate void FunctionDelegate();
 
         Device _device;
         FunctionDelegate drawOverlayFunction;
@@ -37,27 +33,13 @@ namespace Speedo.Hook
         IntPtr preResetHookPtr;
         IntPtr postResetHookPtr;
 
-        public DXHook(SpeedoInterface speedoInterface, SpeedoConfig config)
-        {
-            _config = config;
-            InitInterface(speedoInterface);
-            _interfaceClientEventProxy.UpdateConfig += new UpdateConfigEvent(UpdateConfig);
-        }
-
-        public void InitInterface(SpeedoInterface speedoInterface)
-        {
-            _interface = speedoInterface;
-            _interface.UpdateConfigEventHandler -= _interfaceClientEventProxy.UpdateConfigProxyHandler;
-            _interface.UpdateConfigEventHandler += _interfaceClientEventProxy.UpdateConfigProxyHandler;
-        }
-
         public void Hook()
         {    
             try
             {
                 if (ReadByte((IntPtr)0x443D40) != 0x90)
                 {
-                    _interface.Message(MessageType.Debug, "Initialising hook environment");
+                    speedoInterface.Message(MessageType.Debug, "Initialising hook environment");
                     // Initialise the hook environment - supports up to 5 sets of present, pre-reset, post-reset hooks.
                     byte[] nops = new byte[0xA5];
                     for (int i = 0; i < 0xA5; i++)
@@ -84,7 +66,7 @@ namespace Speedo.Hook
                 preResetPtr = Marshal.GetFunctionPointerForDelegate(preResetFunction);
                 postResetPtr = Marshal.GetFunctionPointerForDelegate(postResetFunction);
 
-                _interface.Message(MessageType.Debug, "Enabling hooks");
+                speedoInterface.Message(MessageType.Debug, "Enabling hooks");
                 // Present hook
                 presentHookPtr = EnableHook((IntPtr)0x443D41, drawOverlayPtr);
                 // Pre-reset hook
@@ -94,7 +76,7 @@ namespace Speedo.Hook
             }
             catch(Exception e)
             {
-                _interface.Message(MessageType.Error, e.ToString());
+                speedoInterface.Message(MessageType.Error, e.ToString());
             }
         }
 
@@ -134,7 +116,7 @@ namespace Speedo.Hook
                     DisableHook(preResetHookPtr);
                     DisableHook(postResetHookPtr);
                     System.Threading.Thread.Sleep(100);
-                    _speedo.Dispose();
+                    speedometer.Dispose();
                 }
                 catch { }
             }
@@ -146,25 +128,26 @@ namespace Speedo.Hook
             {
                 if (_device == null)
                 {
-                    _interface.Message(MessageType.Debug, "Creating speedometer instance");
+                    speedoInterface.Message(MessageType.Debug, "Creating speedometer instance");
                     _device = (Device)ReadIntPtr((IntPtr)0xE99054);
-                    _data = new Data();
-                    _speedo = new Speedometer(_device, _config);
+                    data = new Data();
+                    speedometer = new Speedometer(_device, config);
                 }
                 if (configUpdated)
                 {
-                    _speedo.UpdateConfig(_config);
+                    data.UpdateConfig(config);
+                    speedometer.UpdateConfig(config);
                     configUpdated = false;
                 }
-                _data.GetData();
-                if (_data.racing || _config.AlwaysShow)
+                data.GetData();
+                if (data.racing || config.AlwaysShow)
                 {
-                    _speedo.Draw(_data.speed, _data.form, _data.boostLevel, _data.canStunt, _data.available);
+                    speedometer.Draw(data.speed, data.form, data.boostLevel, data.canStunt, data.available);
                 }
             }
             catch (Exception e)
             {
-                _interface.Message(MessageType.Error, e.ToString());
+                speedoInterface.Message(MessageType.Error, e.ToString());
             }
         }
 
@@ -172,11 +155,11 @@ namespace Speedo.Hook
         {
             try
             {
-                _speedo.OnLostDevice();
+                speedometer.OnLostDevice();
             }
             catch (Exception e)
             {
-                _interface.Message(MessageType.Error, e.ToString());
+                speedoInterface.Message(MessageType.Error, e.ToString());
             }
         }
 
@@ -184,25 +167,12 @@ namespace Speedo.Hook
         {
             try
             {
-                _speedo.OnResetDevice();
+                speedometer.OnResetDevice();
             }
             catch (Exception e)
             {
-                _interface.Message(MessageType.Error, e.ToString());
+                speedoInterface.Message(MessageType.Error, e.ToString());
             }
-        }
-
-        private void UpdateConfig(UpdateConfigEventArgs args)
-        {
-            using (var stream = new MemoryStream(args.Config))
-            {
-                _config = (SpeedoConfig)new BinaryFormatter().Deserialize(stream);
-            }
-            configUpdated = true;
-        }
-
-        private void PingRecieved()
-        {
         }
     }
 }

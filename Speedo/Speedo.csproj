@@ -7,7 +7,7 @@
     <ProjectGuid>{AB29E28E-B95E-4D2F-89D1-DD070620BA6F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AssemblyName>Speedo</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <TargetFrameworkProfile />
     <ApplicationVersion>1.0.0.0</ApplicationVersion>
     <FileAlignment>512</FileAlignment>
@@ -29,17 +29,17 @@
     <WarningLevel>0</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EasyHook, Version=2.7.7097.0, Culture=neutral, PublicKeyToken=4b580fca19d0b0c5, processorArchitecture=MSIL">
-      <HintPath>..\packages\EasyHook.2.7.7097\lib\net40\EasyHook.dll</HintPath>
-    </Reference>
     <Reference Include="SharpDX, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.4.2.1-beta0-g2d1c7f7354\lib\net45\SharpDX.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\SharpDX.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX.Direct3D9, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.Direct3D9.4.2.1-beta0-g2d1c7f7354\lib\net45\SharpDX.Direct3D9.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\SharpDX.Direct3D9.dll</HintPath>
     </Reference>
     <Reference Include="SharpDX.Mathematics, Version=4.2.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SharpDX.Mathematics.4.2.1-beta0-g2d1c7f7354\lib\net45\SharpDX.Mathematics.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\SharpDX.Mathematics.dll</HintPath>
     </Reference>
     <Reference Include="System.Runtime.Remoting" />
     <Reference Include="System" />
@@ -51,27 +51,19 @@
   <ItemGroup>
     <Compile Include="Enums.cs" />
     <Compile Include="Hook\DesignLookup.cs" />
-    <Compile Include="Interface\InterfaceClientEventProxy.cs" />
-    <Compile Include="Interface\UpdateConfigEventArgs.cs" />
+    <Compile Include="Interface\EventProxy.cs" />
     <Compile Include="MemoryHelper.cs" />
     <Compile Include="NativeMethods.cs" />
-    <Compile Include="EntryPoint.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Hook\FontLookup.cs" />
-    <Compile Include="Hook\Speed.cs" />
+    <Compile Include="Hook\Data.cs" />
     <Compile Include="Hook\DXHook.cs" />
     <Compile Include="Hook\Speedometer.cs" />
-    <Compile Include="Interface\SpeedoConfig.cs" />
-    <Compile Include="Interface\MessageReceivedEventArgs.cs" />
+    <Compile Include="Hook\SpeedoConfig.cs" />
     <Compile Include="Interface\SpeedoInterface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="EasyHook32.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="EasyLoad32.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="Themes\Xenn\Design.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -114,9 +106,6 @@
     <Content Include="Themes\Xenn\Speedo_Preview.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

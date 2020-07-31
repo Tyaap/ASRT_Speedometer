@@ -1,5 +1,5 @@
 ﻿using System.Text;
-using static Speedo_Loader.NativeMethods;
+using static NativeMethods;
 
 namespace Speedo_Loader
 {

@@ -13,8 +13,8 @@ namespace Speedo_Loader
                 return false;
             }
 
-            if (int.TryParse(strings[0], out int x) && x >= 640 && x <= 10000 &&
-                int.TryParse(strings[1], out int y) && y >= 480 && y <= 10000)
+            if (int.TryParse(strings[0], out int x) && x >= 100 && x <= 10000 &&
+                int.TryParse(strings[1], out int y) && y >= 100 && y <= 10000)
             {
                 ResX = x;
                 ResY = y;

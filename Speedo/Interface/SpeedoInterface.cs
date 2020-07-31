@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Speedo.Hook;
+using System;
 using System.Timers;
 using System.Windows.Forms;
 
@@ -9,9 +10,9 @@ namespace Speedo.Interface
     [Serializable]
     public delegate void PingTimeoutEvent();
     [Serializable]
-    public delegate void MessageReceivedEvent(MessageReceivedEventArgs message);
+    public delegate void MessageReceivedEvent(string message);
     [Serializable]
-    public delegate void UpdateConfigEvent(UpdateConfigEventArgs message);
+    public delegate void UpdateConfigEvent(SpeedoConfig config);
 
     [Serializable]
     public class SpeedoInterface : MarshalByRefObject
@@ -19,7 +20,7 @@ namespace Speedo.Interface
         public int ProcessId;
         public event PingEvent PingEventHandler;
         public event PingTimeoutEvent PingTimeoutEventHandler;
-        public event MessageReceivedEvent RemoteMessageEventHandler;
+        public event MessageReceivedEvent MessageRecievedEventHandler;
         public event UpdateConfigEvent UpdateConfigEventHandler;
         public System.Timers.Timer pingTimer = new System.Timers.Timer(1500) { AutoReset = false };
         public bool clientConnected = false;
@@ -29,22 +30,35 @@ namespace Speedo.Interface
             pingTimer.Elapsed += PingTimeout;
         }
 
+        public void RegisterEventProxy(EventProxy eventProxy)
+        {
+            // remove any existing copies
+            PingEventHandler -= eventProxy.PingProxyHandler;
+            PingTimeoutEventHandler -= eventProxy.PingTimeoutProxyHandler;
+            MessageRecievedEventHandler -= eventProxy.MessageRecievedProxyHandler;
+            UpdateConfigEventHandler -= eventProxy.UpdateConfigProxyHandler;
+
+            PingEventHandler += eventProxy.PingProxyHandler;
+            PingTimeoutEventHandler += eventProxy.PingTimeoutProxyHandler;
+            MessageRecievedEventHandler += eventProxy.MessageRecievedProxyHandler;
+            UpdateConfigEventHandler += eventProxy.UpdateConfigProxyHandler;
+        }
+
         public void Message(MessageType messageType, string message, params object[] args)
         {
-            if (RemoteMessageEventHandler != null)
+            if (MessageRecievedEventHandler != null)
             {
-                MessageReceivedEventArgs eventArgs = new MessageReceivedEventArgs(messageType, string.Format(message, args));
                 MessageReceivedEvent messageReceivedEvent = null;
-                foreach (Delegate invocation in RemoteMessageEventHandler.GetInvocationList())
+                foreach (Delegate invocation in MessageRecievedEventHandler.GetInvocationList())
                 {
                     try
                     {
                         messageReceivedEvent = (MessageReceivedEvent)invocation;
-                        messageReceivedEvent(eventArgs);
+                        messageReceivedEvent(string.Format("{0}: {1}", messageType, string.Format(message, args)));
                     }
                     catch (Exception e)
                     {
-                        RemoteMessageEventHandler -= messageReceivedEvent;
+                        MessageRecievedEventHandler -= messageReceivedEvent;
                     }
                 }
             }
@@ -54,17 +68,17 @@ namespace Speedo.Interface
         {
             if (UpdateConfigEventHandler != null)
             {
-                UpdateConfigEventArgs eventArgs = new UpdateConfigEventArgs(config);
                 UpdateConfigEvent updateConfigEvent = null;
                 foreach (Delegate invocation in UpdateConfigEventHandler.GetInvocationList())
                 {
                     try
-                    {
+                    {              
                         updateConfigEvent = (UpdateConfigEvent)invocation;
-                        updateConfigEvent(eventArgs);
+                        updateConfigEvent(config);
                     }
                     catch(Exception e)
                     {
+                        Console.WriteLine("UpdateConfig error\n" + e.ToString());
                         UpdateConfigEventHandler -= updateConfigEvent;
                     }
                 }
@@ -85,6 +99,7 @@ namespace Speedo.Interface
                     }
                     catch (Exception e)
                     {
+                        Console.WriteLine("Ping error\n" + e.ToString());
                         PingEventHandler -= pingEvent;
                     }
                 }
@@ -107,8 +122,9 @@ namespace Speedo.Interface
                         pingTimeoutEvent = (PingTimeoutEvent)invocation;
                         pingTimeoutEvent();
                     }
-                    catch
+                    catch(Exception ex)
                     {
+                        Console.WriteLine("PingTimeout error\n" + ex.ToString());
                         PingTimeoutEventHandler -= pingTimeoutEvent;
                     }
                 }
