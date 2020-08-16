@@ -55,11 +55,7 @@ namespace Speedo_Loader
         private Label label6;
         private ComboBox cbTheme;
         private Label label7;
-        private Label label8;
-        private ComboBox cbSpeedType;
         private Button btnAutoDetectRes;
-        private NumericUpDown nudSmoothingFrames;
-        private Label label9;
         private Bitmap overlayImage;
 
         public UserInterface()
@@ -92,8 +88,6 @@ namespace Speedo_Loader
             nudScale.ValueChanged += new System.EventHandler(NudScale_ValueChanged);
             tbOpacity.ValueChanged += new System.EventHandler(TbOpacity_ValueChanged);
             cbTheme.TextChanged += new System.EventHandler(CbTheme_TextChanged);
-            cbSpeedType.TextChanged += new System.EventHandler(CbSpeedType_TextChanged);
-            nudSmoothingFrames.ValueChanged += new System.EventHandler(NudSmoothingFrames_ValueChanged);
             btnAutoDetectRes.Click += new System.EventHandler(BtnAutoDetectRes_Click);
         }
 
@@ -111,8 +105,6 @@ namespace Speedo_Loader
             ini.IniWriteValue("General", "AlwaysShow", cbAlwaysShow.Checked.ToString());
             ini.IniWriteValue("General", "Theme", theme);
             ini.IniWriteValue("General", "Opacity", tbOpacity.Value.ToString());
-            ini.IniWriteValue("General", "SpeedType", cbSpeedType.SelectedIndex.ToString());
-            ini.IniWriteValue("General", "SmoothingFrames", nudSmoothingFrames.Value.ToString());
         }
 
         private void IniRead()
@@ -171,22 +163,6 @@ namespace Speedo_Loader
             else
             {
                 tbOpacity.Value = 255;
-            }
-            if (int.TryParse(ini.IniReadValue("General", "SpeedType"), out int speedType))
-            {
-                cbSpeedType.SelectedIndex = speedType;
-            }
-            else
-            {
-                cbSpeedType.SelectedIndex = 2;
-            }
-            if (int.TryParse(ini.IniReadValue("General", "SmoothingFrames"), out int smoothingFrames))
-            {
-                nudSmoothingFrames.Value = smoothingFrames;
-            }
-            else
-            {
-                nudSmoothingFrames.Value = 0;
             }
         }
 
@@ -343,8 +319,6 @@ namespace Speedo_Loader
                 AlwaysShow = cbAlwaysShow.Checked,
                 Opacity = (byte)tbOpacity.Value,
                 Theme = theme,
-                SpeedType = (SpeedType)cbSpeedType.SelectedIndex,
-                SmoothingFrames = (int)nudSmoothingFrames.Value,
                 Enabled = speedoEnabled
             });
         }
@@ -514,18 +488,13 @@ namespace Speedo_Loader
             this.label6 = new System.Windows.Forms.Label();
             this.cbTheme = new System.Windows.Forms.ComboBox();
             this.label7 = new System.Windows.Forms.Label();
-            this.label8 = new System.Windows.Forms.Label();
-            this.cbSpeedType = new System.Windows.Forms.ComboBox();
             this.btnAutoDetectRes = new System.Windows.Forms.Button();
-            this.nudSmoothingFrames = new System.Windows.Forms.NumericUpDown();
-            this.label9 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.picScreen)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.picOverlay)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudPosX)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudPosY)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudScale)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.tbOpacity)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudSmoothingFrames)).BeginInit();
             this.SuspendLayout();
             // 
             // btnInject
@@ -554,11 +523,11 @@ namespace Speedo_Loader
             // 
             this.txtDebugLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtDebugLog.Location = new System.Drawing.Point(191, 511);
+            this.txtDebugLog.Location = new System.Drawing.Point(4, 514);
             this.txtDebugLog.Multiline = true;
             this.txtDebugLog.Name = "txtDebugLog";
             this.txtDebugLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtDebugLog.Size = new System.Drawing.Size(799, 90);
+            this.txtDebugLog.Size = new System.Drawing.Size(984, 90);
             this.txtDebugLog.TabIndex = 16;
             // 
             // cbAlwaysShow
@@ -566,7 +535,7 @@ namespace Speedo_Loader
             this.cbAlwaysShow.AutoSize = true;
             this.cbAlwaysShow.Checked = true;
             this.cbAlwaysShow.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.cbAlwaysShow.Location = new System.Drawing.Point(45, 455);
+            this.cbAlwaysShow.Location = new System.Drawing.Point(45, 464);
             this.cbAlwaysShow.Name = "cbAlwaysShow";
             this.cbAlwaysShow.Size = new System.Drawing.Size(107, 23);
             this.cbAlwaysShow.TabIndex = 26;
@@ -718,7 +687,7 @@ namespace Speedo_Loader
             // 
             // tbOpacity
             // 
-            this.tbOpacity.Location = new System.Drawing.Point(34, 347);
+            this.tbOpacity.Location = new System.Drawing.Point(34, 348);
             this.tbOpacity.Maximum = 255;
             this.tbOpacity.Name = "tbOpacity";
             this.tbOpacity.Size = new System.Drawing.Size(123, 45);
@@ -728,7 +697,7 @@ namespace Speedo_Loader
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Location = new System.Drawing.Point(42, 323);
+            this.label6.Location = new System.Drawing.Point(42, 324);
             this.label6.Name = "label6";
             this.label6.Size = new System.Drawing.Size(110, 19);
             this.label6.TabIndex = 45;
@@ -739,7 +708,7 @@ namespace Speedo_Loader
             this.cbTheme.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
             this.cbTheme.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
             this.cbTheme.FormattingEnabled = true;
-            this.cbTheme.Location = new System.Drawing.Point(36, 410);
+            this.cbTheme.Location = new System.Drawing.Point(36, 417);
             this.cbTheme.Name = "cbTheme";
             this.cbTheme.Size = new System.Drawing.Size(121, 25);
             this.cbTheme.TabIndex = 46;
@@ -747,34 +716,11 @@ namespace Speedo_Loader
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(45, 388);
+            this.label7.Location = new System.Drawing.Point(45, 395);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(104, 19);
             this.label7.TabIndex = 47;
             this.label7.Text = "Overlay Theme:";
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Location = new System.Drawing.Point(43, 499);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(117, 19);
-            this.label8.TabIndex = 49;
-            this.label8.Text = "Speed calculation:";
-            // 
-            // cbSpeedType
-            // 
-            this.cbSpeedType.AutoCompleteMode = System.Windows.Forms.AutoCompleteMode.Suggest;
-            this.cbSpeedType.AutoCompleteSource = System.Windows.Forms.AutoCompleteSource.ListItems;
-            this.cbSpeedType.FormattingEnabled = true;
-            this.cbSpeedType.Items.AddRange(new object[] {
-            "Position + game time",
-            "Position + real time",
-            "Momentum"});
-            this.cbSpeedType.Location = new System.Drawing.Point(18, 525);
-            this.cbSpeedType.Name = "cbSpeedType";
-            this.cbSpeedType.Size = new System.Drawing.Size(156, 25);
-            this.cbSpeedType.TabIndex = 48;
             // 
             // btnAutoDetectRes
             // 
@@ -785,36 +731,11 @@ namespace Speedo_Loader
             this.btnAutoDetectRes.Text = "Auto-detect";
             this.btnAutoDetectRes.UseVisualStyleBackColor = true;
             // 
-            // nudSmoothingFrames
-            // 
-            this.nudSmoothingFrames.Location = new System.Drawing.Point(131, 565);
-            this.nudSmoothingFrames.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.nudSmoothingFrames.Name = "nudSmoothingFrames";
-            this.nudSmoothingFrames.Size = new System.Drawing.Size(52, 25);
-            this.nudSmoothingFrames.TabIndex = 52;
-            // 
-            // label9
-            // 
-            this.label9.AutoSize = true;
-            this.label9.Location = new System.Drawing.Point(6, 567);
-            this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(124, 19);
-            this.label9.TabIndex = 51;
-            this.label9.Text = "Smoothing frames:";
-            // 
             // UserInterface
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.ClientSize = new System.Drawing.Size(993, 613);
-            this.Controls.Add(this.nudSmoothingFrames);
-            this.Controls.Add(this.label9);
             this.Controls.Add(this.btnAutoDetectRes);
-            this.Controls.Add(this.label8);
-            this.Controls.Add(this.cbSpeedType);
             this.Controls.Add(this.label7);
             this.Controls.Add(this.cbTheme);
             this.Controls.Add(this.label6);
@@ -848,7 +769,6 @@ namespace Speedo_Loader
             ((System.ComponentModel.ISupportInitialize)(this.nudPosY)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.nudScale)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.tbOpacity)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.nudSmoothingFrames)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 

@@ -17,14 +17,15 @@ namespace Program
 {
     public class Program
     {
-        public const string channelName = "Speedo";
-        public static IpcServerChannel speedoServerChannel;
+        public static SpeedoConfig speedoConfig;
+        public static bool configUpdated;
         public static SpeedoInterface speedoInterface;
         public static EventProxy eventProxy;
-        public static SpeedoConfig config;
-        public static DXHook directXHook;
-        public static bool configUpdated;
 
+        private const string channelName = "Speedo";
+        private static IpcServerChannel speedoServerChannel;
+        private static DXHook directXHook;
+        
         public static int Main(string pwzArgument)
         {
             try
@@ -104,7 +105,7 @@ namespace Program
 
         public static void UpdateConfig(SpeedoConfig newConfig)
         {
-            config = newConfig;
+            speedoConfig = newConfig;
             configUpdated = true;
         }
     }

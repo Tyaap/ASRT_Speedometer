@@ -140,7 +140,7 @@ public static class MemoryHelper
 
     public static byte[] ReadBytes(int address, int length)
     {
-        return ReadBytes((UIntPtr)address, length);
+        return ReadBytes((uint)address, length);
     }
     public static byte[] ReadBytes(uint address, int length)
     {
@@ -148,7 +148,7 @@ public static class MemoryHelper
     }
     public static byte[] ReadBytes(IntPtr address, int length)
     {
-        return ReadBytes((UIntPtr)(int)address, length);
+        return ReadBytes((uint)address, length);
     }
     public static byte[] ReadBytes(UIntPtr address, int length)
     {
@@ -331,23 +331,22 @@ public static class MemoryHelper
     }
 
 
-    public static int Allocate(int address, int length)
+    public static int Allocate(int address, int length, int access = 0x40)
     {
-        return Allocate((UIntPtr)address, length);
+        return Allocate((UIntPtr)address, length, access);
     }
-    public static int Allocate(uint address, int length)
+    public static int Allocate(uint address, int length, int access = 0x40)
     {
-        return Allocate((UIntPtr)address, length);
+        return Allocate((UIntPtr)address, length, access);
     }
-    public static int Allocate(IntPtr address, int length)
+    public static int Allocate(IntPtr address, int length, int access = 0x40)
     {
-        return Allocate((UIntPtr)(int)address, length);
+        return Allocate((UIntPtr)(int)address, length, access);
     }
-    public static int Allocate(UIntPtr address, int length)
+    public static int Allocate(UIntPtr address, int length, int access = 0x40)
     {
-        return VirtualAlloc(address, length, 0x3000, 0x40);
+        return VirtualAlloc(address, length, 0x3000, access);
     }
-
 
     public static bool Free(int address, int length)
     {

@@ -1,14 +1,20 @@
 ﻿using Speedo.Interface;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Windows.Forms;
 using static MemoryHelper;
+using static Program.Program;
 
 namespace Speedo.Hook
 {
     public class Data
-    {     
+    {
+        private delegate void CalculateSpeedDelegate(int dataPtr, int index);
+
         public float speed;
         public VehicleForm form;
         public bool racing;
@@ -16,52 +22,68 @@ namespace Speedo.Hook
         public bool canStunt;
         public bool allStar;
         public bool available;
-        private double lastTime = 0;
-        private float[] lastPosition = new float[3] { 0, 0, 0 };
-        private float lastSpeed = 0;
+
+        private static float[] speeds;
         private int playerIndex = 0;
-        private float multiplier = 3.593f;
-        private Stopwatch stopwatch = new Stopwatch();
-
-        
-
-        // buffers for frame smoothing
-       
-        private int currentBufferPos = 0;
-        private float sumDt;
-        private float sumDl;
-        private float sumSpeed;
-        private float[] dtBuffer;
-        private float[] dlBuffer;
-        private float[] speedBuffer;
-
-        public SpeedType speedType = SpeedType.Momentum;
-        public int bufferSize = 1;
+        private const float speedMultiplier = 3.593f;
+        private CalculateSpeedDelegate calculateSpeed = new CalculateSpeedDelegate(CalculateSpeed);
+        private int calculateSpeedPtr;
 
         public Data()
         {
-            stopwatch.Start();
-            dtBuffer = new float[bufferSize];
-            dlBuffer = new float[bufferSize];
-            speedBuffer = new float[bufferSize];
+            speeds = new float[10];
+            calculateSpeedPtr = Marshal.GetFunctionPointerForDelegate(calculateSpeed).ToInt32();
+            GamePatch();
         }
 
         public Data(SpeedoConfig config)
         {
-            stopwatch.Start();
+            speeds = new float[10];
+            calculateSpeedPtr = Marshal.GetFunctionPointerForDelegate(calculateSpeed).ToInt32();
+            GamePatch();
             UpdateConfig(config);
         }
 
-        public void UpdateConfig(SpeedoConfig config)
+        // Patch to retrieve accurate speed values
+        public void GamePatch()
         {
-            speedType = config.SpeedType;
-            bufferSize = 1 + config.SmoothingFrames;
-            dtBuffer = new float[bufferSize];
-            dlBuffer = new float[bufferSize];
-            speedBuffer = new float[bufferSize];
-            sumDl = 0;
-            sumDt = 0;
-            sumSpeed = 0;
+            int callCodePtr = MemoryHelper.Allocate(0, 100);
+            List<byte> callCode = new List<byte>();
+            // backup registers
+            callCode.Add(0x50); // push eax
+            callCode.Add(0x51); // push ecx
+            callCode.Add(0x52); // push edx
+            // call the managed function
+            callCode.Add(0x53); // push ebx
+            callCode.Add(0x57); // push edi
+            callCode.Add(0xE8); // call ...
+            callCode.AddRange(BitConverter.GetBytes(calculateSpeedPtr - (callCodePtr + callCode.Count + 4))); // ... CalculateSpeed
+            // restore registers
+            callCode.Add(0x5a); // pop edx
+            callCode.Add(0x59); // pop ecx
+            callCode.Add(0x58); // pop eax
+            // run original code and return
+            callCode.AddRange(new byte[] { 0x0F, 0x28, 0x87, 0x20, 0x01, 0x00, 0x00 }); // movaps xmm0, [edi + 120]
+            callCode.Add(0xC3); // ret
+            MemoryHelper.Write(callCodePtr, callCode.ToArray());
+
+            List<byte> jumpCode = new List<byte>();
+            jumpCode.Add(0xE8); // call ...
+            jumpCode.AddRange(BitConverter.GetBytes(callCodePtr - 0x4308A2 - 5)); // ... callCodePtr
+            jumpCode.Add(0x90); // nop 
+            jumpCode.Add(0x90); // nop
+            MemoryHelper.Write(0x4308A2, jumpCode.ToArray());
+        }
+
+        private static void CalculateSpeed(int dataPtr, int index)
+        {
+            float dl2 = 0;
+            for (int i = 0; i < 3; i++) // XYZ components
+            {
+                float dx = ReadFloat(dataPtr + 0x120 + i * 4) - ReadFloat(dataPtr + 0x170 + i * 4);
+                dl2 += dx * dx;
+            }
+            speeds[index - 1] = (float)Math.Sqrt(dl2) * 60 * speedMultiplier; // speed = dl/dt * speedMultiplier
         }
 
         public void GetData()
@@ -73,31 +95,18 @@ namespace Speedo.Hook
         {
             UIntPtr tmp = ReadUIntPtr(0xBCE920);
             UIntPtr playerBase = ReadUIntPtr(tmp + 4 * index);
-            available = TimerRunning();
-            racing = available && Racing(playerBase);
+            racing = Racing(playerBase) && TimerRunning();
+            available = MemoryHelper.readSuccess;
             if (!available)
             {
                 speed = 0;
-                lastSpeed = 0;
                 form = 0;
                 canStunt = false;
                 allStar = false;
                 return;
             }
 
-            switch (speedType)
-            {
-                case SpeedType.PositionIGT:
-                    speed = PositionBasedSpeed(index, false);
-                    break;
-                case SpeedType.PositionRT:
-                    speed = PositionBasedSpeed(index, true);
-                    break;
-                case SpeedType.Momentum:
-                    speed = MomentumBasedSpeed(playerBase, index);
-                    break;
-            }
-            
+            speed = speeds[index];
             form = (VehicleForm)ReadInt(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERTRANSFORMSERVICE) + 0x1C);
             canStunt = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.RACERSTUNT) + 0x30);
             allStar = ReadBoolean(GetServiceAddress(playerBase + 0xC880, ServiceID.ALLSTARPOWER) + 0x70);
@@ -106,45 +115,6 @@ namespace Speedo.Hook
             {
                 boostLevel = Math.Min(6, boostLevel + 3);
             }
-        }
-
-        public float MomentumBasedSpeed(UIntPtr playerBase, int index)
-        {
-            currentBufferPos++;
-            if (currentBufferPos >= bufferSize)
-                currentBufferPos = 0;
-            sumSpeed -= speedBuffer[currentBufferPos];
-            float speed = Math.Abs(ReadFloat(playerBase + 0xD81C) * 3.593f);
-            speedBuffer[currentBufferPos] = speed;
-            sumSpeed += speed;
-            return sumSpeed / bufferSize;
-        }
-
-        public float PositionBasedSpeed(int index, bool realTime)
-        {
-            currentBufferPos++;
-            if (currentBufferPos >= bufferSize)
-                currentBufferPos = 0;
-
-            double time = GetTime(realTime);
-            float dt = (float)(time - lastTime);
-            sumDt -= dtBuffer[currentBufferPos];
-            dtBuffer[currentBufferPos] = dt;
-            sumDt += dt;
-            lastTime = time;
-
-            float[] position = GetPosition(index);
-            float dl = Distance(position, lastPosition);
-            sumDl -= dlBuffer[currentBufferPos];
-            dlBuffer[currentBufferPos] = dl;
-            sumDl += dl;
-            lastPosition = position;
-
-            if (sumDt > 0.001 && sumDl / sumDt < 5000) // ignore large/negative speeds
-            {
-                lastSpeed = sumDl / sumDt * multiplier;
-            }
-            return lastSpeed;
         }
 
         public bool TimerRunning()
@@ -177,11 +147,6 @@ namespace Speedo.Hook
                 d += (pos1[i] - pos2[i]) * (pos1[i] - pos2[i]);
             }
             return (float)Math.Sqrt(d);
-        }
-
-        public double GetTime(bool realTime)
-        {
-            return realTime ? stopwatch.Elapsed.TotalSeconds : ReadFloat(0xBCE980);
         }
 
         public int GetPlayerIndex()

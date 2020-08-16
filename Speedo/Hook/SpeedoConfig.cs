@@ -11,8 +11,6 @@ namespace Speedo.Hook
         public byte Opacity = 255;
         public bool AlwaysShow = true;
         public string Theme = "Xenn";
-        public SpeedType SpeedType = SpeedType.PositionIGT;
-        public int SmoothingFrames = 4;
         public bool Enabled = true;
     }
 }

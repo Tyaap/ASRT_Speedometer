@@ -22,7 +22,7 @@ namespace Speedo.Hook
 
         private delegate void FunctionDelegate();
 
-        Device _device;
+        Device device;
         FunctionDelegate drawOverlayFunction;
         FunctionDelegate preResetFunction;
         FunctionDelegate postResetFunction;
@@ -34,7 +34,7 @@ namespace Speedo.Hook
         IntPtr postResetHookPtr;
 
         public void Hook()
-        {    
+        {
             try
             {
                 if (ReadByte((IntPtr)0x443D40) != 0x90)
@@ -126,24 +126,20 @@ namespace Speedo.Hook
         {
             try
             {
-                if (_device == null)
+                if (device == null)
                 {
                     speedoInterface.Message(MessageType.Debug, "Creating speedometer instance");
-                    _device = (Device)ReadIntPtr((IntPtr)0xE99054);
+                    device = (Device)ReadIntPtr((IntPtr)0xE99054);
                     data = new Data();
-                    speedometer = new Speedometer(_device, config);
+                    speedometer = new Speedometer(device, speedoConfig);
                 }
                 if (configUpdated)
                 {
-                    data.UpdateConfig(config);
-                    speedometer.UpdateConfig(config);
+                    speedometer.UpdateConfig(speedoConfig);
                     configUpdated = false;
                 }
                 data.GetData();
-                if (data.racing || config.AlwaysShow)
-                {
-                    speedometer.Draw(data.speed, data.form, data.boostLevel, data.canStunt, data.available);
-                }
+                speedometer.Draw(data.racing || speedoConfig.AlwaysShow, data.available, data.speed, data.form, data.boostLevel, data.canStunt);
             }
             catch (Exception e)
             {

@@ -50,7 +50,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Enums.cs" />
-    <Compile Include="Hook\DesignLookup.cs" />
+    <Compile Include="Hook\ThemeLookup.cs" />
     <Compile Include="Interface\EventProxy.cs" />
     <Compile Include="MemoryHelper.cs" />
     <Compile Include="NativeMethods.cs" />
