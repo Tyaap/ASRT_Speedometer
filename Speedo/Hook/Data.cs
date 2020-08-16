@@ -77,6 +77,11 @@ namespace Speedo.Hook
 
         private static void CalculateSpeed(int dataPtr, int index)
         {
+            if (index > 10)
+            {
+                // there are brief moments when >10 players are registered, which should be ignored
+                return;
+            }
             float dl2 = 0;
             for (int i = 0; i < 3; i++) // XYZ components
             {
@@ -126,27 +131,6 @@ namespace Speedo.Hook
         public bool Racing(UIntPtr playerBase)
         {
             return ReadBoolean(playerBase + 0xEB98);
-        }
-
-        public float[] GetPosition(int index)
-        {
-            UIntPtr tmp = ReadUIntPtr(0xBC3E28);
-            tmp = ReadUIntPtr(tmp + 0x160);
-            tmp = ReadUIntPtr(tmp + 0x8);
-            tmp = ReadUIntPtr(tmp + 0xD0);
-            tmp = ReadUIntPtr(tmp + 0x68);
-            tmp = ReadUIntPtr(tmp + 4 * index);
-            return new float[3] { ReadFloat(tmp + 0x170), ReadFloat(tmp + 0x174), ReadFloat(tmp + 0x178) };
-        }
-
-        public float Distance(float[] pos1, float[] pos2)
-        {
-            float d = 0;
-            for (int i = 0; i < 3; i++)
-            {
-                d += (pos1[i] - pos2[i]) * (pos1[i] - pos2[i]);
-            }
-            return (float)Math.Sqrt(d);
         }
 
         public int GetPlayerIndex()
