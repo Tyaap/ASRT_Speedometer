@@ -5,9 +5,17 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speedo Loader", "Speedo Loader\Speedo Loader.csproj", "{58EB00AE-6C60-45ED-952F-B56DD484D063}"
 	ProjectSection(ProjectDependencies) = postProject
 		{AB29E28E-B95E-4D2F-89D1-DD070620BA6F} = {AB29E28E-B95E-4D2F-89D1-DD070620BA6F}
+		{04EF8D93-523D-4270-85CB-9E341A453825} = {04EF8D93-523D-4270-85CB-9E341A453825}
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Speedo", "Speedo\Speedo.csproj", "{AB29E28E-B95E-4D2F-89D1-DD070620BA6F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Bootstrapper", "Bootstrapper\Bootstrapper.vcxproj", "{25750B19-1BF6-476E-887F-1E27464F1183}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Injector", "Injector\Injector.vcxproj", "{04EF8D93-523D-4270-85CB-9E341A453825}"
+	ProjectSection(ProjectDependencies) = postProject
+		{25750B19-1BF6-476E-887F-1E27464F1183} = {25750B19-1BF6-476E-887F-1E27464F1183}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,6 +31,14 @@ Global
 		{AB29E28E-B95E-4D2F-89D1-DD070620BA6F}.Debug|x86.Build.0 = Release|x86
 		{AB29E28E-B95E-4D2F-89D1-DD070620BA6F}.Release|x86.ActiveCfg = Release|x86
 		{AB29E28E-B95E-4D2F-89D1-DD070620BA6F}.Release|x86.Build.0 = Release|x86
+		{25750B19-1BF6-476E-887F-1E27464F1183}.Debug|x86.ActiveCfg = Debug|Win32
+		{25750B19-1BF6-476E-887F-1E27464F1183}.Debug|x86.Build.0 = Debug|Win32
+		{25750B19-1BF6-476E-887F-1E27464F1183}.Release|x86.ActiveCfg = Release|Win32
+		{25750B19-1BF6-476E-887F-1E27464F1183}.Release|x86.Build.0 = Release|Win32
+		{04EF8D93-523D-4270-85CB-9E341A453825}.Debug|x86.ActiveCfg = Debug|Win32
+		{04EF8D93-523D-4270-85CB-9E341A453825}.Debug|x86.Build.0 = Debug|Win32
+		{04EF8D93-523D-4270-85CB-9E341A453825}.Release|x86.ActiveCfg = Release|Win32
+		{04EF8D93-523D-4270-85CB-9E341A453825}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

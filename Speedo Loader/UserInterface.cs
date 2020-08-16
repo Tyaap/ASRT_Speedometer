@@ -67,10 +67,17 @@ namespace Speedo_Loader
         }
 
         private void Form1_Load(object sender, EventArgs e)
-        {
+        {      
+            try
+            {
+                InitInterfaceServer();
+            }
+            catch(RemotingException)
+            {
+                // If the interface fails to start then most likely the speedometer is already running.
+                Application.Exit();
+            }
             IniRead();
-            InitInterfaceServer();
-
             picOverlay.Parent = picScreen;
             picOverlay.BackColor = Color.Transparent;
             cbTheme.Items.AddRange(GetThemeList(baseDirectory + "\\Themes"));
