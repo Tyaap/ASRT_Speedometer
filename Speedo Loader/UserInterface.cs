@@ -239,16 +239,6 @@ namespace Speedo_Loader
             Process[] processes = Process.GetProcessesByName("ASN_App_PcDx9_Final");
             if (processes.Length > 0)
             {
-                SpeedoConfig config = new SpeedoConfig()
-                {
-                    PosX = (int)nudPosX.Value,
-                    PosY = (int)nudPosY.Value,
-                    Scale = (float)nudScale.Value,
-                    AlwaysShow = cbAlwaysShow.Checked,
-                    Theme = theme,
-                    Opacity = (byte)tbOpacity.Value,
-                    Enabled = true
-                };
                 WriteMessageToLog(MessageType.Information, "Start loading speedometer");
                 bool result = Inject(processes[0].Id, baseDirectory + "\\Bootstrapper.dll", "LoadManagedProject", baseDirectory + "\\Speedo.dll");
                 if (!result)
@@ -277,7 +267,6 @@ namespace Speedo_Loader
             speedoInterface.PingEventHandler += SpeedoConnected;
             speedoInterface.PingTimeoutEventHandler += SpeedoDisconnected;
             speedoInterface.MessageRecievedEventHandler += MessageRecieved;
-            
         }
 
         private void SpeedoConnected()

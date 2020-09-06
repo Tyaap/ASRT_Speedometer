@@ -1,8 +1,11 @@
-﻿public enum VehicleForm
+﻿using System.ComponentModel;
+
+public enum VehicleForm
 {
-    CAR,
-    PLANE,
-    BOAT,
+    [Description("Car")] Car = 0,
+    [Description("Plane")] Plane = 1,
+    [Description("Boat")] Boat = 2,
+    [Description("All-Star")] AllStar = 3
 }
 public enum ServiceID : uint
 {
@@ -45,12 +48,7 @@ public enum ServiceID : uint
     RACERGHOST = 0xF2065A8B,
     SPECTRESERVICE = 0xAEA26CD4,
 }
-public enum SpeedType
-{
-    PositionIGT,
-    PositionRT,
-    Momentum,
-}
+
 public enum MessageType
 {
     Debug,

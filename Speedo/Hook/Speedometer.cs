@@ -273,7 +273,7 @@ namespace Speedo.Hook
                     themeConfig.VehicleForm.FontSpacing,
                     themeConfig.VehicleForm.FontScale,
                     themeConfig.VehicleForm.TextCentred,
-                    string.Format(themeConfig.VehicleForm.TextFormat, form));
+                    string.Format(themeConfig.VehicleForm.TextFormat, form.ToString().ToUpper()));
             }
             dial.End();
         }
@@ -289,13 +289,13 @@ namespace Speedo.Hook
             dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(speedoScale, speedoScale), Vector2.Zero, 0f, speedoPos + themeConfig.Dial.Position * speedoScale);
             switch (form)
             {
-                case VehicleForm.CAR:
+                case VehicleForm.Car:
                     dial.Draw(carTexture, baseColour);
                     break;
-                case VehicleForm.BOAT:
+                case VehicleForm.Boat:
                     dial.Draw(boatTexture, baseColour);
                     break;
-                case VehicleForm.PLANE:
+                case VehicleForm.Plane:
                     dial.Draw(planeTexture, baseColour);
                     break;
             }
@@ -373,11 +373,11 @@ namespace Speedo.Hook
         {
             switch (form)
             {
-                case VehicleForm.CAR:
+                case VehicleForm.Car:
                     return themeConfig.Speed.CarMaxSpeed;
-                case VehicleForm.BOAT:
+                case VehicleForm.Boat:
                     return themeConfig.Speed.BoatMaxSpeed;
-                case VehicleForm.PLANE:
+                case VehicleForm.Plane:
                     return themeConfig.Speed.PlaneMaxSpeed;
                 default:
                     return 0f;

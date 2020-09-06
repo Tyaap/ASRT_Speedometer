@@ -12,7 +12,6 @@ namespace Speedo_Loader
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new UserInterface());
         }
     }

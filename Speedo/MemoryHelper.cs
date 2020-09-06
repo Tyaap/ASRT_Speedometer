@@ -10,7 +10,12 @@ public static class MemoryHelper
 
     public static void Initialise()
     {
-        processHandle = OpenProcess(0x38, false, GetCurrentProcessId());
+        Initialise(GetCurrentProcessId());
+    }
+
+    public static void Initialise(int processId)
+    {
+        processHandle = OpenProcess(0x38, false, processId);
     }
 
     public static byte ReadByte(int address)
@@ -28,6 +33,42 @@ public static class MemoryHelper
     public static byte ReadByte(UIntPtr address)
     {
         return ReadBytes(address, 1)[0];
+    }
+
+
+    public static short ReadShort(int address)
+    {
+        return BitConverter.ToInt16(ReadBytes(address, 2), 0);
+    }
+    public static short ReadShort(uint address)
+    {
+        return BitConverter.ToInt16(ReadBytes(address, 2), 0);
+    }
+    public static short ReadShort(IntPtr address)
+    {
+        return BitConverter.ToInt16(ReadBytes(address, 2), 0);
+    }
+    public static short ReadShort(UIntPtr address)
+    {
+        return BitConverter.ToInt16(ReadBytes(address, 2), 0);
+    }
+
+
+    public static ushort ReadUShort(int address)
+    {
+        return BitConverter.ToUInt16(ReadBytes(address, 2), 0);
+    }
+    public static ushort ReadUShort(uint address)
+    {
+        return BitConverter.ToUInt16(ReadBytes(address, 2), 0);
+    }
+    public static ushort ReadUShort(IntPtr address)
+    {
+        return BitConverter.ToUInt16(ReadBytes(address, 2), 0);
+    }
+    public static ushort ReadUShort(UIntPtr address)
+    {
+        return BitConverter.ToUInt16(ReadBytes(address, 2), 0);
     }
 
 
@@ -102,6 +143,43 @@ public static class MemoryHelper
         return (IntPtr)ReadInt(address);
     }
 
+
+    public static long ReadLong(int address)
+    {
+        return BitConverter.ToInt64(ReadBytes(address, 8), 0);
+    }
+    public static long ReadLong(uint address)
+    {
+        return BitConverter.ToInt64(ReadBytes(address, 8), 0);
+    }
+    public static long ReadLong(IntPtr address)
+    {
+        return BitConverter.ToInt64(ReadBytes(address, 8), 0);
+    }
+    public static long ReadLong(UIntPtr address)
+    {
+        return BitConverter.ToInt64(ReadBytes(address, 8), 0);
+    }
+
+
+    public static ulong ReadULong(int address)
+    {
+        return BitConverter.ToUInt64(ReadBytes(address, 8), 0);
+    }
+    public static ulong ReadULong(uint address)
+    {
+        return BitConverter.ToUInt64(ReadBytes(address, 8), 0);
+    }
+    public static ulong ReadULong(IntPtr address)
+    {
+        return BitConverter.ToUInt64(ReadBytes(address, 8), 0);
+    }
+    public static ulong ReadULong(UIntPtr address)
+    {
+        return BitConverter.ToUInt64(ReadBytes(address, 8), 0);
+    }
+
+
     public static float ReadFloat(int address)
     {
         return BitConverter.ToSingle(ReadBytes(address, 4), 0);
@@ -117,6 +195,24 @@ public static class MemoryHelper
     public static float ReadFloat(UIntPtr address)
     {
         return BitConverter.ToSingle(ReadBytes(address, 4), 0);
+    }
+
+
+    public static double ReadDouble(int address)
+    {
+        return BitConverter.ToDouble(ReadBytes(address, 8), 0);
+    }
+    public static double ReadDouble(uint address)
+    {
+        return BitConverter.ToDouble(ReadBytes(address, 8), 0);
+    }
+    public static double ReadDouble(IntPtr address)
+    {
+        return BitConverter.ToDouble(ReadBytes(address, 8), 0);
+    }
+    public static double ReadDouble(UIntPtr address)
+    {
+        return BitConverter.ToDouble(ReadBytes(address, 8), 0);
     }
 
 
@@ -173,7 +269,7 @@ public static class MemoryHelper
     public static string ReadString(UIntPtr address)
     {
         string s = "";
-        while(true)
+        while (true)
         {
             byte b = ReadByte(address += 1);
             if (b != 0)
@@ -185,6 +281,60 @@ public static class MemoryHelper
                 return s;
             }
         }
+    }
+
+
+    public static void Write(int address, byte value)
+    {
+        Write(address, new byte[] { value });
+    }
+    public static void Write(uint address, byte value)
+    {
+        Write(address, new byte[] { value });
+    }
+    public static void Write(IntPtr address, byte value)
+    {
+        Write(address, new byte[] { value });
+    }
+    public static void Write(UIntPtr address, byte value)
+    {
+        Write(address, new byte[] { value });
+    }
+
+
+    public static void Write(int address, short value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(uint address, short value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(IntPtr address, short value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(UIntPtr address, short value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+
+
+    public static void Write(int address, ushort value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(uint address, ushort value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(IntPtr address, ushort value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(UIntPtr address, ushort value)
+    {
+        Write(address, BitConverter.GetBytes(value));
     }
 
 
@@ -259,6 +409,42 @@ public static class MemoryHelper
     }
 
 
+    public static void Write(int address, long value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(uint address, long value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(IntPtr address, long value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(UIntPtr address, long value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+
+
+    public static void Write(int address, ulong value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(uint address, ulong value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(IntPtr address, ulong value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(UIntPtr address, ulong value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+
+
     public static void Write(int address, float number)
     {
         Write(address, BitConverter.GetBytes(number));
@@ -272,6 +458,24 @@ public static class MemoryHelper
         Write(address, BitConverter.GetBytes(value));
     }
     public static void Write(UIntPtr address, float value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+
+
+    public static void Write(int address, double number)
+    {
+        Write(address, BitConverter.GetBytes(number));
+    }
+    public static void Write(uint address, double value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(IntPtr address, double value)
+    {
+        Write(address, BitConverter.GetBytes(value));
+    }
+    public static void Write(UIntPtr address, double value)
     {
         Write(address, BitConverter.GetBytes(value));
     }
@@ -365,4 +569,3 @@ public static class MemoryHelper
         return VirtualFree(address, length, 0x8000); // 0x8000 = MEM_RELEASE
     }
 }
-
