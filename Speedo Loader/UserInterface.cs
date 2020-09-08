@@ -1,6 +1,6 @@
 ﻿using Speedo;
 using Speedo.Hook;
-using Speedo.Interface;
+using Remoting;
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -19,6 +19,7 @@ using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using System.Xml;
 using static NativeMethods;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Speedo_Loader
 {
@@ -44,11 +45,10 @@ namespace Speedo_Loader
         private Label label4;
 
         private IpcServerChannel speedoLoaderServer;
-        private SpeedoInterface speedoInterface = new SpeedoInterface();
+        private Interface speedoInterface = new Interface();
         private EventProxy eventProxy = new EventProxy();
         private string channelName = "Speedo";
-        private PingEvent speedoConnected;
-        private PingTimeoutEvent speedoDisconnected;
+        private bool speedoIsConnected = false;
 
         private string theme;
         private TrackBar tbOpacity;
@@ -57,13 +57,12 @@ namespace Speedo_Loader
         private Label label7;
         private Button btnAutoDetectRes;
         private Bitmap overlayImage;
+        private System.Windows.Forms.Timer regularTaskTimer = new System.Windows.Forms.Timer { Interval = 100 };
 
         public UserInterface()
         {
             InitializeComponent();
             ini = new IniFile(baseDirectory + "\\settings.ini");
-            speedoConnected = new PingEvent(SpeedoConnected);
-            speedoDisconnected = new PingTimeoutEvent(SpeedoDisconnected);
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -96,6 +95,9 @@ namespace Speedo_Loader
             tbOpacity.ValueChanged += new System.EventHandler(TbOpacity_ValueChanged);
             cbTheme.TextChanged += new System.EventHandler(CbTheme_TextChanged);
             btnAutoDetectRes.Click += new System.EventHandler(BtnAutoDetectRes_Click);
+
+            regularTaskTimer.Tick += new System.EventHandler(CheckSpeedoConnected);
+            regularTaskTimer.Start();
         }
 
         private void OnExit(object sender, FormClosingEventArgs e)
@@ -222,19 +224,17 @@ namespace Speedo_Loader
 
         private void BtnInject_Click(object sender, EventArgs e)
         {
-            if (speedoInterface.clientConnected)
-            {
-                speedoEnabled = !speedoEnabled;
-                UpdateConfig();
-                btnInject.Text = (speedoEnabled ? "Disable" : "Enable") + " Speedometer";
-            }
-            else
+            if (!speedoIsConnected)
             {
                 LoadSpeedo();
+                return;
             }
+            speedoEnabled = !speedoEnabled;
+            btnInject.Text = (speedoEnabled ? "Disable" : "Enable") + " Speedometer";
+            UpdateConfig();
         }
 
-        private void LoadSpeedo()
+        private bool LoadSpeedo()
         {
             Process[] processes = Process.GetProcessesByName("ASN_App_PcDx9_Final");
             if (processes.Length > 0)
@@ -245,10 +245,12 @@ namespace Speedo_Loader
                 {
                     WriteMessageToLog(MessageType.Error, "Speedo.dll injection falied.");
                 }
+                return result;
             }
             else
             {
                 WriteMessageToLog(MessageType.Error, "Could not find ASN_App_PcDx9_Final.exe");
+                return false;
             }
         }
 
@@ -264,30 +266,26 @@ namespace Speedo_Loader
             ChannelServices.RegisterChannel(speedoLoaderServer, false);
             RemotingServices.Marshal(speedoInterface, channelName);
 
-            speedoInterface.PingEventHandler += SpeedoConnected;
-            speedoInterface.PingTimeoutEventHandler += SpeedoDisconnected;
             speedoInterface.MessageRecievedEventHandler += MessageRecieved;
         }
 
-        private void SpeedoConnected()
+        public void CheckSpeedoConnected(object sender, EventArgs e)
         {
-            speedoEnabled = true;
-            speedoInterface.PingEventHandler -= speedoConnected;
-            this.Invoke(new Action(() => {
-                btnInject.Text = "Disable Speedometer";
-                WriteMessageToLog(MessageType.Information, "Speedometer connected");
+            bool result = speedoInterface.Ping();
+            if (result && !speedoIsConnected)
+            {
+                WriteMessageToLog("Speedometer connected!");
+                speedoIsConnected = true;
+                speedoEnabled = true;
                 UpdateConfig();
-            }));
-        }
-
-        private void SpeedoDisconnected()
-        {
-            speedoEnabled = false;
-            speedoInterface.PingEventHandler += speedoConnected;
-            this.Invoke(new Action(() => {
+                btnInject.Text = "Disable Speedometer";
+            }
+            else if (!result && speedoIsConnected)
+            {
+                WriteMessageToLog("Speedometer disconnected!");
+                speedoIsConnected = false;
                 btnInject.Text = "Enable Speedometer";
-                WriteMessageToLog(MessageType.Information, "Speedometer disconnected");
-            }));
+            }
         }
 
         private void MessageRecieved(string message)
@@ -307,7 +305,7 @@ namespace Speedo_Loader
 
         private void UpdateConfig()
         {
-            speedoInterface.UpdateConfig(new SpeedoConfig()
+            SpeedoConfig speedoConfig = new SpeedoConfig()
             {
                 PosX = (int)nudPosX.Value,
                 PosY = (int)nudPosY.Value,
@@ -316,7 +314,14 @@ namespace Speedo_Loader
                 Opacity = (byte)tbOpacity.Value,
                 Theme = theme,
                 Enabled = speedoEnabled
-            });
+            };
+
+            using (var stream = new MemoryStream())
+            {
+                new BinaryFormatter().Serialize(stream, speedoConfig);
+                stream.Flush();
+                speedoInterface.UpdateConfig(stream.ToArray());
+            }
         }
 
         private string[] GetThemeList(string path)
@@ -593,7 +598,7 @@ namespace Speedo_Loader
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(40, 70);
+            this.label3.Location = new System.Drawing.Point(40, 69);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(113, 19);
             this.label3.TabIndex = 34;
@@ -712,7 +717,7 @@ namespace Speedo_Loader
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Location = new System.Drawing.Point(45, 395);
+            this.label7.Location = new System.Drawing.Point(45, 394);
             this.label7.Name = "label7";
             this.label7.Size = new System.Drawing.Size(104, 19);
             this.label7.TabIndex = 47;

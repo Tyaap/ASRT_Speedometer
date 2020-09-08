@@ -1,5 +1,5 @@
 ﻿using Speedo.Hook;
-using Speedo.Interface;
+using Remoting;
 using Speedo;
 using System;
 using System.Collections;
@@ -12,27 +12,22 @@ using System.Runtime.Serialization.Formatters;
 using System.Threading;
 using System.Windows.Forms;
 using static NativeMethods;
+using System.Runtime.Serialization.Formatters.Binary;
 
-namespace Program
+namespace Speedo
 {
     public class Program
     {
-        public static SpeedoConfig speedoConfig;
-        public static bool configUpdated;
-        public static SpeedoInterface speedoInterface;
-        public static EventProxy eventProxy;
-
         private const string channelName = "Speedo";
-        private static IpcServerChannel speedoServerChannel;
-        private static DXHook directXHook;
-        
-        public static int Main(string pwzArgument)
+        private Interface speedoInterface;
+        private EventProxy eventProxy;
+        private IpcServerChannel speedoServerChannel;
+        private DXHook directXHook;
+
+        public int Run()
         {
             try
             {
-                // Make sure this assembly can be resolved during serialisation
-                AppDomain.CurrentDomain.AssemblyResolve += new ResolveEventHandler(MyResolveEventHandler);
-
                 // Register IPC communications: Speedo Loader --> Speedo    
                 speedoServerChannel = new IpcServerChannel(
                     new Hashtable
@@ -43,29 +38,31 @@ namespace Program
                     new BinaryServerFormatterSinkProvider() { TypeFilterLevel = TypeFilterLevel.Full });  
                 ChannelServices.RegisterChannel(speedoServerChannel, false);
 
-                // Create event proxy
-                eventProxy = new EventProxy();
-
                 // Retrieve IPC interface
-                speedoInterface = (SpeedoInterface)Activator.GetObject(
-                    typeof(SpeedoInterface),
+                speedoInterface = (Interface)Activator.GetObject(
+                    typeof(Interface),
                     "ipc://" + channelName + "/" + channelName);
                 speedoInterface.Message(MessageType.Information, "Speedo.dll injection success", GetCurrentProcessId());
 
+                // Create event proxy
+                eventProxy = new EventProxy();
+                speedoInterface.RegisterEventProxy(eventProxy);
+
                 // Hook
                 MemoryHelper.Initialise();
-                directXHook = new DXHook();
+                directXHook = new DXHook(speedoInterface);
+                eventProxy.UpdateConfig += directXHook.UpdateConfig;
                 directXHook.Hook();
-                eventProxy.UpdateConfig += UpdateConfig;
 
                 while (true)
                 {
+                    GC.KeepAlive(directXHook); // GC likes to destroy directXHook, unlsess it is present in the while loop.
                     if (speedoInterface == null)
                     {
                         try
                         {
-                            speedoInterface = (SpeedoInterface)Activator.GetObject(
-                                typeof(SpeedoInterface),
+                            speedoInterface = (Interface)Activator.GetObject(
+                                typeof(Interface),
                                 "ipc://" + channelName + "/" + channelName);
                         }
                         catch(Exception e)
@@ -96,17 +93,6 @@ namespace Program
                 MessageBox.Show(e.ToString());
             }
             return 0;
-        }
-
-        private static Assembly MyResolveEventHandler(object sender, ResolveEventArgs args)
-        {
-            return System.Reflection.Assembly.GetExecutingAssembly();
-        }
-
-        public static void UpdateConfig(SpeedoConfig newConfig)
-        {
-            speedoConfig = newConfig;
-            configUpdated = true;
         }
     }
 }

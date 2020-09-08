@@ -5,12 +5,12 @@ namespace Speedo.Hook
     [Serializable]
     public class SpeedoConfig
     {
-        public int PosX = 50;
-        public int PosY = 120;
+        public int PosX = 0;
+        public int PosY = 0;
         public float Scale = 1.0f;
-        public byte Opacity = 255;
-        public bool AlwaysShow = true;
-        public string Theme = "Xenn";
-        public bool Enabled = true;
+        public byte Opacity = 0;
+        public bool AlwaysShow = false;
+        public string Theme = "";
+        public bool Enabled = false;
     }
 }

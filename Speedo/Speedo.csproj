@@ -49,9 +49,10 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="EntryPoint.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="Hook\ThemeLookup.cs" />
-    <Compile Include="Interface\EventProxy.cs" />
+    <Compile Include="Remoting\EventProxy.cs" />
     <Compile Include="MemoryHelper.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="Program.cs" />
@@ -60,7 +61,7 @@
     <Compile Include="Hook\DXHook.cs" />
     <Compile Include="Hook\Speedometer.cs" />
     <Compile Include="Hook\SpeedoConfig.cs" />
-    <Compile Include="Interface\SpeedoInterface.cs" />
+    <Compile Include="Remoting\Interface.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

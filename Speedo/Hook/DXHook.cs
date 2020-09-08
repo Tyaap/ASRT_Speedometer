@@ -1,5 +1,5 @@
 ﻿using SharpDX.Direct3D9;
-using Speedo.Interface;
+using Remoting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,14 +11,18 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Windows.Forms;
 using static MemoryHelper;
-using static Program.Program;
+using System.Runtime.Serialization;
+using System.Reflection;
 
 namespace Speedo.Hook
 {
     public class DXHook : IDisposable
     {
+        private Interface speedoInterface;
         private Data data;
         private Speedometer speedometer;
+        private SpeedoConfig speedoConfig;
+        private bool speedoConfigUpdated;
 
         private delegate void FunctionDelegate();
 
@@ -32,6 +36,11 @@ namespace Speedo.Hook
         IntPtr presentHookPtr;
         IntPtr preResetHookPtr;
         IntPtr postResetHookPtr;
+
+        public DXHook(Interface speedoInterface)
+        {
+            this.speedoInterface = speedoInterface;
+        }
 
         public void Hook()
         {
@@ -124,6 +133,10 @@ namespace Speedo.Hook
 
         private void DrawOverlay()
         {
+            //speedoInterface.Message(MessageType.Debug, "Device: " + (device == null));
+            //speedoInterface.Message(MessageType.Debug, "Data: " + (data == null));
+            //speedoInterface.Message(MessageType.Debug, "Speedometer: " + (speedometer == null));
+            //speedoInterface.Message(MessageType.Debug, "speedoConfig.AlwaysShow={0} configUpdated={1}", speedoConfig.AlwaysShow, speedoConfigUpdated);
             try
             {
                 if (device == null)
@@ -131,15 +144,18 @@ namespace Speedo.Hook
                     speedoInterface.Message(MessageType.Debug, "Creating speedometer instance");
                     device = (Device)ReadIntPtr((IntPtr)0xE99054);
                     data = new Data();
-                    speedometer = new Speedometer(device, speedoConfig);
+                    speedometer = new Speedometer(speedoInterface, device);
                 }
-                if (configUpdated)
+                if (speedoConfigUpdated)
                 {
                     speedometer.UpdateConfig(speedoConfig);
-                    configUpdated = false;
+                    speedoConfigUpdated = false;
                 }
                 data.GetData();
-                speedometer.Draw(data.racing || speedoConfig.AlwaysShow, data.available, data.speed, data.form, data.boostLevel, data.canStunt);
+                if (speedoConfig != null)
+                {
+                    speedometer.Draw(data.racing || speedoConfig.AlwaysShow, data.available, data.speed, data.form, data.boostLevel, data.canStunt);
+                }
             }
             catch (Exception e)
             {
@@ -168,6 +184,25 @@ namespace Speedo.Hook
             catch (Exception e)
             {
                 speedoInterface.Message(MessageType.Error, e.ToString());
+            }
+        }
+
+        public void UpdateConfig(byte[] config)
+        {
+            using (var stream = new MemoryStream(config))
+            {
+                BinaryFormatter binaryFormatter = new BinaryFormatter() { Binder = new ExecutingAssemblyBinder() };
+                speedoConfig = (SpeedoConfig)binaryFormatter.Deserialize(stream);
+            }
+            speedoConfigUpdated = true;
+        }
+
+        // Ensure this assembly is found during deserialisation
+        sealed class ExecutingAssemblyBinder : SerializationBinder
+        {
+            public override Type BindToType(string assemblyName, string typeName)
+            {
+                return System.Reflection.Assembly.GetExecutingAssembly().GetType(typeName);
             }
         }
     }

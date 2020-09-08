@@ -48,12 +48,3 @@ public enum ServiceID : uint
     RACERGHOST = 0xF2065A8B,
     SPECTRESERVICE = 0xAEA26CD4,
 }
-
-public enum MessageType
-{
-    Debug,
-    Information,
-    Warning,
-    Error,
-}
-

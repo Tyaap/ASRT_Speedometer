@@ -1,5 +1,4 @@
-﻿using Speedo.Interface;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -7,7 +6,6 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows.Forms;
 using static MemoryHelper;
-using static Program.Program;
 
 namespace Speedo.Hook
 {
@@ -34,14 +32,6 @@ namespace Speedo.Hook
             speeds = new float[10];
             calculateSpeedPtr = Marshal.GetFunctionPointerForDelegate(calculateSpeed).ToInt32();
             GamePatch();
-        }
-
-        public Data(SpeedoConfig config)
-        {
-            speeds = new float[10];
-            calculateSpeedPtr = Marshal.GetFunctionPointerForDelegate(calculateSpeed).ToInt32();
-            GamePatch();
-            UpdateConfig(config);
         }
 
         // Patch to retrieve accurate speed values

@@ -1,6 +1,6 @@
 ﻿using SharpDX;
 using SharpDX.Direct3D9;
-using Speedo.Interface;
+using Remoting;
 using System;
 using System.CodeDom;
 using System.Diagnostics;
@@ -8,12 +8,13 @@ using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
-using static Program.Program;
 
 namespace Speedo.Hook
 {
     internal class Speedometer : IDisposable
     {
+        private Interface speedoInterface;
+
         private readonly string baseDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
         private Device device;
         private bool loaded;
@@ -47,10 +48,10 @@ namespace Speedo.Hook
         private double opacityGrad = 255;
         public double opacity;
 
-        public Speedometer(Device device, SpeedoConfig speedoConfig)
+        public Speedometer(Interface speedoInterface, Device device)
         {
+            this.speedoInterface = speedoInterface;
             this.device = device;
-            UpdateConfig(speedoConfig);
             stopwatch.Start();
         }
 
@@ -64,8 +65,9 @@ namespace Speedo.Hook
             catch
             {
                 speedoInterface.Message(MessageType.Error, "Failed to load asset: Design.xml");
-                enabled = false;
+                return;
             }
+
             dial = new Sprite(device);
             if (themeConfig.Dial.Show)
             {
@@ -179,11 +181,13 @@ namespace Speedo.Hook
             speedoScale = speedoConfig.Scale;
             speedoPos = new Vector2(speedoConfig.PosX, speedoConfig.PosY);
             maxOpacity = speedoConfig.Opacity;
-
             if (theme != speedoConfig.Theme)
             {
                 theme = speedoConfig.Theme;
                 this.Dispose();
+            }
+            if (!loaded)
+            {
                 this.Load();
             }
         }

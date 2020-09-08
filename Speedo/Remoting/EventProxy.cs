@@ -1,13 +1,13 @@
-﻿using Speedo.Hook;
-using System;
+﻿using System;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Windows.Forms;
 
-namespace Speedo.Interface
+namespace Remoting
 {
     public class EventProxy : MarshalByRefObject
     {
         public event PingEvent Ping;
-        public event PingTimeoutEvent PingTimeout;
         public event UpdateConfigEvent UpdateConfig;
         public event MessageReceivedEvent MessageRecieved;
 
@@ -23,12 +23,7 @@ namespace Speedo.Interface
             Ping?.Invoke();
         }
 
-        public void PingTimeoutProxyHandler()
-        {
-            PingTimeout?.Invoke();
-        }
-
-        public void UpdateConfigProxyHandler(SpeedoConfig config)
+        public void UpdateConfigProxyHandler(byte[] config)
         {
             UpdateConfig?.Invoke(config);
         }
