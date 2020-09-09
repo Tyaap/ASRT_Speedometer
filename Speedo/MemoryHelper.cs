@@ -1,6 +1,7 @@
 ﻿using System;
-using static NativeMethods;
 using System.Text;
+
+using static NativeMethods;
 
 public static class MemoryHelper
 {
@@ -268,19 +269,13 @@ public static class MemoryHelper
     }
     public static string ReadString(UIntPtr address)
     {
-        string s = "";
-        while (true)
+        int length = 0;
+        while (ReadByte(address + length) != 0)
         {
-            byte b = ReadByte(address += 1);
-            if (b != 0)
-            {
-                s += (char)b;
-            }
-            else
-            {
-                return s;
-            }
+            length++;
         }
+        string s = Encoding.UTF8.GetString(ReadBytes(address, length));
+        return s.TrimEnd(char.Parse("�")); // remove corrupted characters at the end
     }
 
 

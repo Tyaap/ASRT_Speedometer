@@ -1,5 +1,4 @@
 ﻿using SharpDX.Direct3D9;
-using Remoting;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,36 +9,39 @@ using System.Runtime.Remoting;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading;
 using System.Windows.Forms;
-using static MemoryHelper;
 using System.Runtime.Serialization;
 using System.Reflection;
+
+using Remoting;
+using static MemoryHelper;
 
 namespace Speedo.Hook
 {
     public class DXHook : IDisposable
     {
+        private delegate void FunctionDelegate();
+
         private Interface speedoInterface;
         private Data data;
         private Speedometer speedometer;
         private SpeedoConfig speedoConfig;
         private bool speedoConfigUpdated;
 
-        private delegate void FunctionDelegate();
+        private Device device;
+        private FunctionDelegate drawOverlayFunction;
+        private FunctionDelegate preResetFunction;
+        private FunctionDelegate postResetFunction;
+        private IntPtr drawOverlayPtr;
+        private IntPtr preResetPtr;
+        private IntPtr postResetPtr;
+        private IntPtr presentHookPtr;
+        private IntPtr preResetHookPtr;
+        private IntPtr postResetHookPtr;
 
-        Device device;
-        FunctionDelegate drawOverlayFunction;
-        FunctionDelegate preResetFunction;
-        FunctionDelegate postResetFunction;
-        IntPtr drawOverlayPtr;
-        IntPtr preResetPtr;
-        IntPtr postResetPtr;
-        IntPtr presentHookPtr;
-        IntPtr preResetHookPtr;
-        IntPtr postResetHookPtr;
-
-        public DXHook(Interface speedoInterface)
+        public DXHook(Interface speedoInterface, EventProxy eventProxy)
         {
             this.speedoInterface = speedoInterface;
+            eventProxy.UpdateConfig += UpdateConfig;
         }
 
         public void Hook()
@@ -110,27 +112,6 @@ namespace Speedo.Hook
             Write(hookPtr, new byte[] { 0x90, 0x90, 0x90, 0x90, 0x90 });
         }
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        protected void Dispose(bool disposing)
-        {
-            if (disposing)
-            {
-                try
-                {
-                    DisableHook(presentHookPtr);
-                    DisableHook(preResetHookPtr);
-                    DisableHook(postResetHookPtr);
-                    System.Threading.Thread.Sleep(100);
-                    speedometer.Dispose();
-                }
-                catch { }
-            }
-        }
-
         private void DrawOverlay()
         {
             //speedoInterface.Message(MessageType.Debug, "Device: " + (device == null));
@@ -187,7 +168,7 @@ namespace Speedo.Hook
             }
         }
 
-        public void UpdateConfig(byte[] config)
+        private void UpdateConfig(byte[] config)
         {
             using (var stream = new MemoryStream(config))
             {
@@ -202,7 +183,28 @@ namespace Speedo.Hook
         {
             public override Type BindToType(string assemblyName, string typeName)
             {
-                return System.Reflection.Assembly.GetExecutingAssembly().GetType(typeName);
+                return Type.GetType(typeName);
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        protected void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try
+                {
+                    DisableHook(presentHookPtr);
+                    DisableHook(preResetHookPtr);
+                    DisableHook(postResetHookPtr);
+                    System.Threading.Thread.Sleep(100);
+                    speedometer.Dispose();
+                }
+                catch { }
             }
         }
     }

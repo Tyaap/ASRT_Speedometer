@@ -1,13 +1,12 @@
 ﻿using SharpDX;
 using SharpDX.Direct3D9;
-using Remoting;
 using System;
-using System.CodeDom;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading;
-using System.Windows.Forms;
+
+using Remoting;
 
 namespace Speedo.Hook
 {

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Reflection;
-
-class EntryPoint
+﻿class EntryPoint
 {
     static int Main(string pwzArgument)
     {

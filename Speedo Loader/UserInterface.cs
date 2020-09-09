@@ -1,6 +1,4 @@
-﻿using Speedo;
-using Speedo.Hook;
-using Remoting;
+﻿using Remoting;
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -18,8 +16,10 @@ using System.Timers;
 using System.Windows.Forms;
 using System.Windows.Forms.VisualStyles;
 using System.Xml;
-using static NativeMethods;
 using System.Runtime.Serialization.Formatters.Binary;
+
+using static NativeMethods;
+using Speedo.Hook;
 
 namespace Speedo_Loader
 {

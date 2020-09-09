@@ -1,7 +1,4 @@
-﻿using Speedo.Hook;
-using Remoting;
-using Speedo;
-using System;
+﻿using System;
 using System.Collections;
 using System.IO;
 using System.Reflection;
@@ -11,8 +8,9 @@ using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.Serialization.Formatters;
 using System.Threading;
 using System.Windows.Forms;
-using static NativeMethods;
-using System.Runtime.Serialization.Formatters.Binary;
+
+using Remoting;
+using Speedo.Hook;
 
 namespace Speedo
 {
@@ -42,7 +40,7 @@ namespace Speedo
                 speedoInterface = (Interface)Activator.GetObject(
                     typeof(Interface),
                     "ipc://" + channelName + "/" + channelName);
-                speedoInterface.Message(MessageType.Information, "Speedo.dll injection success", GetCurrentProcessId());
+                speedoInterface.Message(MessageType.Information, "Speedo.dll injection success");
 
                 // Create event proxy
                 eventProxy = new EventProxy();
@@ -50,8 +48,7 @@ namespace Speedo
 
                 // Hook
                 MemoryHelper.Initialise();
-                directXHook = new DXHook(speedoInterface);
-                eventProxy.UpdateConfig += directXHook.UpdateConfig;
+                directXHook = new DXHook(speedoInterface, eventProxy);
                 directXHook.Hook();
 
                 while (true)
