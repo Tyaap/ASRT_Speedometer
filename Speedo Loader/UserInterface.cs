@@ -236,22 +236,21 @@ namespace Speedo_Loader
 
         private bool LoadSpeedo()
         {
-            Process[] processes = Process.GetProcessesByName("ASN_App_PcDx9_Final");
-            if (processes.Length > 0)
+            foreach (Process process in Process.GetProcesses())
             {
-                WriteMessageToLog(MessageType.Information, "Start loading speedometer");
-                bool result = Inject(processes[0].Id, baseDirectory + "\\Bootstrapper.dll", "LoadManagedProject", baseDirectory + "\\Speedo.dll");
-                if (!result)
+                if (process.MainWindowTitle == "Sonic & All-Stars Racing Transformed - BUILD (532043 - Jan 15 2014 10:38:42)")
                 {
-                    WriteMessageToLog(MessageType.Error, "Speedo.dll injection falied.");
+                    WriteMessageToLog(MessageType.Information, "Start loading speedometer");
+                    bool result = Inject(process.Id, baseDirectory + "\\Bootstrapper.dll", "LoadManagedProject", baseDirectory + "\\Speedo.dll");
+                    if (!result)
+                    {
+                        WriteMessageToLog(MessageType.Error, "Speedo.dll injection falied.");
+                    }
+                    return result;
                 }
-                return result;
             }
-            else
-            {
-                WriteMessageToLog(MessageType.Error, "Could not find ASN_App_PcDx9_Final.exe");
-                return false;
-            }
+            WriteMessageToLog(MessageType.Error, "Could not find ASN_App_PcDx9_Final.exe");
+            return false;
         }
 
         private void InitInterfaceServer()

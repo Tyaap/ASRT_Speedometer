@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include <Windows.h>
 #include <iostream>
 #include <TlHelp32.h>
@@ -11,7 +11,7 @@
 using namespace Hades;
 using namespace std;
 
-BOOL Inject(DWORD ProcessId, const PSTR ModuleName, const PSTR ExportName, const PWSTR ExportArgument)
+BOOL Inject(DWORD ProcessId, const PWSTR ModulePath, const PSTR ExportName, const PWSTR ExportArgument)
 {
     cout << "Inject: Attempting module injection." << endl;
     HMODULE hKernel32 = GetModuleHandle(L"kernel32.dll");
@@ -27,22 +27,24 @@ BOOL Inject(DWORD ProcessId, const PSTR ModuleName, const PSTR ExportName, const
 
     // LoadLibraryA needs a string as its argument, but it needs to be in
     // the remote Process' memory space.
-    size_t StrLength = strlen(ModuleName);
-    LPVOID RemoteString = (LPVOID)VirtualAllocEx(Proc, NULL, StrLength,
-        MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    WriteProcessMemory(Proc, RemoteString, ModuleName, StrLength, NULL);
+    size_t StrLength = wcslen(ModulePath);
+    LPVOID RemoteString = (LPVOID)VirtualAllocEx(Proc, NULL, StrLength * sizeof(WCHAR), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    WriteProcessMemory(Proc, RemoteString, ModulePath, StrLength * sizeof(WCHAR), NULL);
 
-    // Start a remote thread on the targeted Process, using LoadLibraryA
-    // as our entry point to load a custom dll. (The A is for Ansi)
+    // Start a remote thread on the targeted Process, using LoadLibraryW
+    // as our entry point to load a custom dll. (The W is for wide char)
     EnsureCloseHandle LoadThread = CreateRemoteThread(Proc, NULL, NULL,
-        (LPTHREAD_START_ROUTINE)GetProcAddress(hKernel32, "LoadLibraryA"),
+        (LPTHREAD_START_ROUTINE)GetProcAddress(hKernel32, "LoadLibraryW"),
         RemoteString, NULL, NULL);
     WaitForSingleObject(LoadThread, INFINITE);
 
     // Clean up the remote string
     VirtualFreeEx(Proc, RemoteString, 0, MEM_RELEASE);
 
-    PTHREAD_START_ROUTINE exportAddr = GetExportRemoteAddr(ProcessId, ModuleName, ExportName);
+    wstring tmpStr(ModulePath);
+    size_t nameStart = tmpStr.find_last_of(L"\\") + 1;
+
+    PTHREAD_START_ROUTINE exportAddr = GetExportRemoteAddr(ProcessId, ModulePath + nameStart, ExportName);
     if (!exportAddr)
     {
         cout << "Module injection failed." << endl;
@@ -76,7 +78,7 @@ void CallExport(const DWORD ProcessId, const PTHREAD_START_ROUTINE pfnThreadRtn,
         return;
     }
 }
-PTHREAD_START_ROUTINE GetExportRemoteAddr(const DWORD ProcessId, const PSTR ModuleName, const PSTR ExportName)
+PTHREAD_START_ROUTINE GetExportRemoteAddr(const DWORD ProcessId, const PWSTR ModuleName, const PSTR ExportName)
 {
     // Grab a new Snapshot of the process
     EnsureCloseHandle Snapshot(CreateToolhelp32Snapshot(TH32CS_SNAPMODULE, ProcessId));
@@ -90,15 +92,11 @@ PTHREAD_START_ROUTINE GetExportRemoteAddr(const DWORD ProcessId, const PSTR Modu
     MODULEENTRY32W ModEntry = { sizeof(ModEntry) };
     bool Found = false;
     BOOL bMoreMods = Module32FirstW(Snapshot, &ModEntry);
-    wstring ModuleTmp(ModuleName, ModuleName + strlen(ModuleName));
-
     for (; bMoreMods; bMoreMods = Module32NextW(Snapshot, &ModEntry))
     {
-        wstring ExePath(ModEntry.szExePath);
-
         // For debug
-        wcout << ModEntry.szExePath << endl;
-        Found = (ExePath == ModuleTmp);
+        wcout << ModEntry.szModule << endl;
+        Found = wcscmp(ModEntry.szModule, ModuleName) == 0;
         if (Found)
             break;
     }
@@ -112,7 +110,7 @@ PTHREAD_START_ROUTINE GetExportRemoteAddr(const DWORD ProcessId, const PSTR Modu
     PBYTE ModuleBase = ModEntry.modBaseAddr;
 
     // Load module as data so we can read the export address table (EAT) locally.
-    EnsureFreeLibrary MyModule(LoadLibraryExA(ModuleName, NULL,
+    EnsureFreeLibrary MyModule(LoadLibraryEx(ModuleName, NULL,
         DONT_RESOLVE_DLL_REFERENCES));
 
     // Get module pointer

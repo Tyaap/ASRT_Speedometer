@@ -5,18 +5,29 @@ using static NativeMethods;
 
 public static class MemoryHelper
 {
+    public static int processId;
     public static int processHandle;
     public static bool readSuccess;
     public static bool writeSuccess;
 
-    public static void Initialise()
+
+    public static bool Initialise()
     {
-        Initialise(GetCurrentProcessId());
+        processId = GetCurrentProcessId();
+        return Initialise(processId);
     }
 
-    public static void Initialise(int processId)
+    public static bool Initialise(int processId)
     {
+        MemoryHelper.processId = processId;
         processHandle = OpenProcess(0x38, false, processId);
+        return processHandle != 0;
+    }
+
+    public static void Reset()
+    {
+        processId = 0;
+        processHandle = 0;
     }
 
     public static byte ReadByte(int address)
@@ -496,19 +507,19 @@ public static class MemoryHelper
 
     public static void Write(int address, string value)
     {
-        Write(address, Encoding.ASCII.GetBytes(value + (char)0));
+        Write(address, Encoding.UTF8.GetBytes(value + (char)0));
     }
     public static void Write(uint address, string value)
     {
-        Write(address, Encoding.ASCII.GetBytes(value + (char)0));
+        Write(address, Encoding.UTF8.GetBytes(value + (char)0));
     }
     public static void Write(IntPtr address, string value)
     {
-        Write(address, Encoding.ASCII.GetBytes(value + (char)0));
+        Write(address, Encoding.UTF8.GetBytes(value + (char)0));
     }
     public static void Write(UIntPtr address, string value)
     {
-        Write(address, Encoding.ASCII.GetBytes(value + (char)0));
+        Write(address, Encoding.UTF8.GetBytes(value + (char)0));
     }
 
 
@@ -544,7 +555,7 @@ public static class MemoryHelper
     }
     public static int Allocate(UIntPtr address, int length, int access = 0x40)
     {
-        return VirtualAlloc(address, length, 0x3000, access);
+        return VirtualAllocEx(processHandle, address, length, 0x3000, access);
     }
 
     public static bool Free(int address, int length)
@@ -561,6 +572,6 @@ public static class MemoryHelper
     }
     public static bool Free(UIntPtr address, int length)
     {
-        return VirtualFree(address, length, 0x8000); // 0x8000 = MEM_RELEASE
+        return VirtualFreeEx(processHandle, address, length, 0x8000); // 0x8000 = MEM_RELEASE
     }
 }

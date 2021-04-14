@@ -26,14 +26,16 @@ public static class NativeMethods
         UIntPtr lpNumberOfBytesRead);
 
     [DllImport("kernel32", SetLastError = true)]
-    internal static extern int VirtualAlloc(
+    internal static extern int VirtualAllocEx(
+        int hProcess,
         UIntPtr lpAddress,
         int dwSize,
         int lAllocationType,
         int flProtect);
 
     [DllImport("kernel32", SetLastError = true)]
-    internal static extern bool VirtualFree(
+    internal static extern bool VirtualFreeEx(
+        int hProcess,
         UIntPtr lpAddress,
         int dwSize,
         int dwFreeType);

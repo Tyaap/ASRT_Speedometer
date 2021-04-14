@@ -6,8 +6,8 @@ public static class NativeMethods
     [DllImport("injector", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool Inject(
         int processId,
-        string dllName,
-        string exportName,
+        [MarshalAs(UnmanagedType.LPWStr)] string dllName,
+        [MarshalAs(UnmanagedType.LPStr)] string exportName,
         [MarshalAs(UnmanagedType.LPWStr)] string exportArgument);
 
 
