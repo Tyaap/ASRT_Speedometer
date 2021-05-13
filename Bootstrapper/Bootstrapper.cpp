@@ -47,7 +47,7 @@ DllExport void LoadManagedProject(const PWSTR managedDllLocation)
             managedDllLocation,
             L"EntryPoint",
             L"Main",
-            L"",
+            managedDllLocation,
             &result);
         pClrRuntimeHost->Release();
         pClrRuntimeInfo->Release();

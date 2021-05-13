@@ -1,6 +1,6 @@
 ﻿class EntryPoint
 {
-    static int Main(string pwzArgument)
+    static int Main(string managedDllLocation)
     {
         return new Speedo.Program().Run();
     }
