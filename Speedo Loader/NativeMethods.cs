@@ -6,10 +6,10 @@ public static class NativeMethods
     [DllImport("injector", CallingConvention = CallingConvention.Cdecl)]
     public static extern bool Inject(
         int processId,
-        [MarshalAs(UnmanagedType.LPWStr)] string dllName,
+        [MarshalAs(UnmanagedType.LPWStr)] string dllPath,
         [MarshalAs(UnmanagedType.LPStr)] string exportName,
-        [MarshalAs(UnmanagedType.LPWStr)] string exportArgument);
-
+        [MarshalAs(UnmanagedType.LPWStr)] string exportArgument
+    );
 
     [DllImport("kernel32", CharSet = CharSet.Unicode)]
     internal static extern int WritePrivateProfileString(

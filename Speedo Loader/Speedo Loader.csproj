@@ -64,13 +64,7 @@
     <Compile Include="ResolutionScaler.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Bootstrapper.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
     <Content Include="icon.ico" />
-    <Content Include="Injector.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
