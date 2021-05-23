@@ -3,7 +3,7 @@ using System.Text;
 
 public static class NativeMethods
 {
-    [DllImport("injector", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("injector", CallingConvention = CallingConvention.Cdecl, CharSet=CharSet.Unicode)]
     public static extern bool Inject(
         int processId,
         [MarshalAs(UnmanagedType.LPWStr)] string dllPath,

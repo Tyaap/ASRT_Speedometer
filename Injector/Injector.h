@@ -8,11 +8,10 @@
 */
 DllExport BOOL Inject(DWORD ProcessId, const PWSTR ModuleName, const PSTR ExportName, const PWSTR ExportArgument);
 
-/* Given a pid, a dll name, and a method name, walks the export address
-* table then gets remote address of the named method.
-*/
-PTHREAD_START_ROUTINE GetExportRemoteAddr(const DWORD ProcessId, const PWSTR ModuleName, const PSTR ExportName);
+DWORD GetModuleBaseAddr(const DWORD ProcessId, const PWSTR ModulePath);
+
+DWORD GetExportAddr(const PWSTR ModulePath, const PSTR ExportName);
 
 /* Given a pid and remote address of an export, calls the export.
 */
-void CallExport(const DWORD ProcessId, const PTHREAD_START_ROUTINE pfnThreadRtn, const PWSTR ExportArgument);
+bool RemoteCall(const DWORD ProcessId, const PTHREAD_START_ROUTINE pfnThreadRtn, const PWSTR ExportArgument);
