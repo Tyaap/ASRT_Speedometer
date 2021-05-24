@@ -326,13 +326,14 @@ namespace Speedo.Hook
         {
             dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0, new Vector2(speedoScale, speedoScale), Vector2.Zero, 0f, speedoPos + themeConfig.Dial.GlowPosition * speedoScale);
             float tmp = Math.Max(0f, speed - GetMaxSpeed(form) * themeConfig.Dial.GlowStart_FractionOfMaxSpeed);
-            themeConfig.Dial.GlowColour.A = (byte)(255f * Math.Min(1, tmp / GetMaxSpeed(form) / (1f - themeConfig.Dial.GlowStart_FractionOfMaxSpeed)));
+            themeConfig.Dial.GlowColour.A = (byte)(opacity * Math.Min(1, tmp / GetMaxSpeed(form) / (1f - themeConfig.Dial.GlowStart_FractionOfMaxSpeed)));
             dial.Draw(glowTexture, themeConfig.Dial.GlowColour);
         }
 
         private void DrawLight()
         {
             dial.Transform = Matrix.Transformation2D(Vector2.Zero, 0f, new Vector2(speedoScale, speedoScale), Vector2.Zero, 0f, speedoPos + themeConfig.StuntLight.Position * speedoScale);
+            themeConfig.StuntLight.Colour.A = (byte)opacity;
             dial.Draw(lightTexture, themeConfig.StuntLight.Colour);
         }
 
