@@ -22,7 +22,7 @@ BOOL Inject(DWORD ProcessId, const PWSTR ModulePath, const PSTR ExportName, cons
         | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ProcessId);
     if (!hProcess)
     {
-        cout << "Inject: OpenProcess() failed: " << GetLastError() << endl;
+        cout << "Inject: OpenProcess() failed: " << GetLastErrorAsString() << endl;
         return false;
     }
 
@@ -66,9 +66,9 @@ bool RemoteCall(const DWORD ProcessId, const LPTHREAD_START_ROUTINE lpfnThreadRt
         PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_CREATE_THREAD 
         | PROCESS_QUERY_LIMITED_INFORMATION, FALSE, ProcessId);
 
-    if (NULL == hProcess)
+    if (!hProcess)
     {
-        cout << "CallExport: OpenProcess() failed: " << GetLastError() << endl;
+        cout << "CallExport: OpenProcess() failed: " << GetLastErrorAsString() << endl;
         return false;
     }
 
@@ -78,7 +78,7 @@ bool RemoteCall(const DWORD ProcessId, const LPTHREAD_START_ROUTINE lpfnThreadRt
         MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if (!WriteProcessMemory(hProcess, RemoteString, ExportArgument, StrNumBytes, NULL))
     {
-        cout << "CallExport: WriteProcessMemory() failed: " << GetLastError() << endl;
+        cout << "CallExport: WriteProcessMemory() failed: " << GetLastErrorAsString() << endl;
         return false;
     }
 
@@ -96,12 +96,10 @@ bool RemoteCall(const DWORD ProcessId, const LPTHREAD_START_ROUTINE lpfnThreadRt
 DWORD GetModuleBaseAddr(const DWORD ProcessId, const PWSTR ModulePath)
 {
     // Get a handle to the process.
-    EnsureCloseHandle hProcess = OpenProcess(PROCESS_QUERY_INFORMATION |
-        PROCESS_VM_READ,
-        FALSE, ProcessId);
-    if (NULL == hProcess)
+    EnsureCloseHandle hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, ProcessId);
+    if (!hProcess)
     {
-        cout << "GetModuleBaseAddr: OpenProcess() failed: " << GetLastError() << endl;
+        cout << "GetModuleBaseAddr: OpenProcess() failed: " << GetLastErrorAsString() << endl;
         return 0;
     }
 
@@ -110,7 +108,7 @@ DWORD GetModuleBaseAddr(const DWORD ProcessId, const PWSTR ModulePath)
     DWORD cbNeeded;
     if (!EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded))
     {
-        cout << "GetModuleBaseAddr: EnumProcessModules() failed: " << GetLastError() << endl;
+        cout << "GetModuleBaseAddr: EnumProcessModules() failed: " << GetLastErrorAsString() << endl;
         return 0;
     }
     for (unsigned int i = 0; i < (cbNeeded / sizeof(HMODULE)); i++)
@@ -135,6 +133,36 @@ DWORD GetExportAddr(const PWSTR ModulePath, const PSTR ExportName)
 {
     // Load module as data so we can read the export address table (EAT) locally.
     EnsureFreeLibrary MyModule(LoadLibraryExW(ModulePath, NULL, DONT_RESOLVE_DLL_REFERENCES));
-    return reinterpret_cast<DWORD>(GetProcAddress(MyModule, ExportName)) - reinterpret_cast<DWORD>(static_cast<LPVOID>(MyModule));
+    FARPROC exportAddr = GetProcAddress(MyModule, ExportName);
+    if (!exportAddr)
+    {
+        cout << "GetExportAddr: GetProcAddress() failed: " << GetLastErrorAsString() << endl;
+        return 0;
+    }
+    return reinterpret_cast<DWORD>(exportAddr) - reinterpret_cast<DWORD>(static_cast<LPVOID>(MyModule));
 }
 
+//Returns the last Win32 error, in string format. Returns an empty string if there is no error.
+std::string GetLastErrorAsString()
+{
+    //Get the error message ID, if any.
+    DWORD errorMessageID = GetLastError();
+    if (errorMessageID == 0) {
+        return std::string(); //No error message has been recorded
+    }
+
+    LPSTR messageBuffer = nullptr;
+
+    //Ask Win32 to give us the string version of that message ID.
+    //The parameters we pass in, tell Win32 to create the buffer that holds the message for us (because we don't yet know how long the message string will be).
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+        NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+    //Copy the error message into a std::string.
+    std::string message(messageBuffer, size);
+
+    //Free the Win32's string's buffer.
+    LocalFree(messageBuffer);
+
+    return message;
+}
